@@ -2,6 +2,7 @@ static EXAMPLE_INPUT: &str = r#"
 
 "#;
 
+// cargo watch -x "run -q"
 fn main() {
     println!("-- Advent of Code 2023 - Day 1 --");
 
@@ -15,4 +16,3 @@ fn part1(input: &str) -> usize {
     input.len()
 }
 
-// cargo watch -x "run -q"
