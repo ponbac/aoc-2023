@@ -70,7 +70,6 @@ fn find_digits(line: &str) -> Vec<usize> {
             let word = word.iter().collect::<String>();
             if let Some(digit) = text_digits.iter().position(|&s| s == word) {
                 digits.push(digit);
-                i += 1;
                 break;
             }
             j += 1;
