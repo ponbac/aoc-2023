@@ -23,12 +23,12 @@ fn part1(input: &str) -> usize {
     input
         .trim()
         .lines()
-        .map(|l| l.chars().filter(|c| c.is_numeric()))
-        .map(|chars| {
-            let chars = chars.collect::<Vec<_>>();
-            let first = chars.first().unwrap();
-            let last = chars.last().unwrap();
-            format!("{}{}", first, last)
+        .map(|l| {
+            let first = l.find(|c: char| c.is_numeric()).unwrap();
+            let last = l.rfind(|c: char| c.is_numeric()).unwrap();
+
+            let chars = l.chars().collect::<Vec<_>>();
+            format!("{}{}", chars[first], chars[last])
         })
         .map(|s| s.parse::<usize>().unwrap())
         .sum()
