@@ -144,8 +144,13 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    // time execution
+    let start = std::time::Instant::now();
     part1(input);
     part2(input);
+    let duration = start.elapsed();
+
+    println!("Finished after {} ms", duration.as_millis(),);
 }
 
 fn part1(input: &str) {
@@ -169,11 +174,9 @@ fn part2(input: &str) {
     let star_symbols_with_two_surrounding_numbers = symbols
         .iter()
         .filter(|s| s.symbol == '*')
-        .filter(|s| s.surrounding_numbers(&grid).len() == 2)
-        .collect::<Vec<&GridSymbol>>();
+        .filter(|s| s.surrounding_numbers(&grid).len() == 2);
 
     let sum_of_products = star_symbols_with_two_surrounding_numbers
-        .iter()
         .map(|s| s.surrounding_numbers(&grid).iter().product::<usize>())
         .sum::<usize>();
 
