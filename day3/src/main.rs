@@ -113,21 +113,8 @@ impl GridSymbol {
     fn surrounding_numbers(&self, grid: &Grid) -> Vec<usize> {
         let mut numbers = Vec::new();
 
-        let start_x = self.x.saturating_sub(1);
-        let end_x = if self.x + 1 < grid.width {
-            self.x + 1
-        } else {
-            self.x
-        };
-        let start_y = self.y.saturating_sub(1);
-        let end_y = if self.y + 1 < grid.height {
-            self.y + 1
-        } else {
-            self.y
-        };
-
-        for y in start_y..=end_y {
-            for x in start_x..=end_x {
+        for y in self.y.saturating_sub(1)..=(self.y + 1).min(grid.height - 1) {
+            for x in self.x.saturating_sub(1)..=(self.x + 1).min(grid.width - 1) {
                 if x == self.x && y == self.y {
                     continue;
                 }
