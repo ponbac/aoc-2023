@@ -1,6 +1,6 @@
 use nom::{
     bytes::complete::tag,
-    character::complete::{digit1, multispace0, multispace1},
+    character::complete::{digit1, multispace1},
     combinator::{map, map_res},
     multi::separated_list1,
     sequence::{preceded, separated_pair, tuple},
@@ -28,7 +28,7 @@ impl Card {
                     multispace1,
                     parse_number,
                     tag(":"),
-                    multispace0,
+                    multispace1,
                 )),
                 separated_pair(
                     separated_list1(multispace1, parse_number),
