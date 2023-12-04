@@ -31,8 +31,8 @@ fn parse_card(i: &str) -> (Vec<usize>, Vec<usize>) {
 fn main() {
     println!("-- Advent of Code 2023 - Day 4 --");
 
-    // let input = EXAMPLE_INPUT;
-    let input = include_str!("input.txt");
+    let input = EXAMPLE_INPUT;
+    // let input = include_str!("input.txt");
 
     part1(input);
     // part2(input);
@@ -48,18 +48,18 @@ fn part1(input: &str) {
     let mut queue = VecDeque::new();
 
     for i in 0..cards.len() {
-        queue.push_back((i, 1));
+        queue.push_back(i);
     }
 
-    while let Some((card_index, count)) = queue.pop_front() {
-        total_cards += count;
+    while let Some(card_index) = queue.pop_front() {
+        total_cards += 1;
         let (ref winning, ref my) = cards[card_index];
 
         let matches = my.iter().filter(|&&num| winning.contains(&num)).count();
 
         for next_card_index in card_index + 1..card_index + 1 + matches {
             if next_card_index < cards.len() {
-                queue.push_back((next_card_index, count));
+                queue.push_back(next_card_index);
             }
         }
     }
