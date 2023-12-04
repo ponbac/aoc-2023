@@ -71,13 +71,13 @@ fn part2(input: &str) {
         .map(|line| parse_card(line).unwrap().1)
         .collect::<Vec<_>>();
 
-    let mut factors = vec![1; cards.len()];
+    let mut cards_count = vec![1; cards.len()];
     for (i, card) in cards.iter().enumerate() {
-        let factor = factors[i];
-        (i..i + card.matches as usize).for_each(|j| factors[j + 1] += factor);
+        let count = cards_count[i];
+        (i..i + card.matches as usize).for_each(|j| cards_count[j + 1] += count);
     }
 
-    let sum = factors.iter().sum::<u32>();
+    let sum = cards_count.iter().sum::<u32>();
     println!("Part 2: {}", sum);
 }
 
