@@ -27,9 +27,6 @@ fn parse_card(i: &str) -> (Vec<usize>, Vec<usize>) {
 
     (winning, my)
 }
-// fn parse_cards(i: &str) -> Vec<(Vec<usize>, Vec<usize>)> {
-//     i.lines().map(parse_card).collect()
-// }
 
 fn main() {
     println!("-- Advent of Code 2023 - Day 4 --");
