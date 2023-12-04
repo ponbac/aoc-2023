@@ -1,9 +1,9 @@
 use nom::{
     bytes::complete::tag,
     character::complete::{digit1, multispace0, multispace1},
-    combinator::map_res,
+    combinator::{map, map_res},
     multi::separated_list1,
-    sequence::{preceded, separated_pair},
+    sequence::{preceded, separated_pair, tuple},
     IResult,
 };
 
@@ -19,20 +19,28 @@ struct Card {
     matches: u32,
 }
 
-fn parse_card(i: &str) -> IResult<&str, Card> {
-    let i = i.split(": ").nth(1).unwrap().trim();
-    let (i, (winning, my)) = separated_pair(
-        separated_list1(multispace1, preceded(multispace0, parse_number)),
-        tag(" | "),
-        separated_list1(multispace1, preceded(multispace0, parse_number)),
-    )(i)?;
-
-    Ok((
-        i,
-        Card {
-            matches: my.iter().filter(|&&num| winning.contains(&num)).count() as u32,
-        },
-    ))
+impl Card {
+    fn parse(i: &str) -> IResult<&str, Self> {
+        map(
+            preceded(
+                tuple((
+                    tag("Card"),
+                    multispace1,
+                    parse_number,
+                    tag(":"),
+                    multispace0,
+                )),
+                separated_pair(
+                    separated_list1(multispace1, parse_number),
+                    tuple((multispace1, tag("|"), multispace1)),
+                    separated_list1(multispace1, parse_number),
+                ),
+            ),
+            |(winning, my)| Self {
+                matches: my.iter().filter(|&&num| winning.contains(&num)).count() as u32,
+            },
+        )(i)
+    }
 }
 
 fn main() {
@@ -46,13 +54,9 @@ fn main() {
 }
 
 fn part1(input: &str) {
-    let cards = input
+    let sum = input
         .lines()
-        .map(|line| parse_card(line).unwrap().1)
-        .collect::<Vec<_>>();
-
-    let sum = cards
-        .iter()
+        .map(|line| Card::parse(line).unwrap().1)
         .map(|card| {
             if card.matches > 0 {
                 2_u32.pow(card.matches - 1)
@@ -68,7 +72,7 @@ fn part1(input: &str) {
 fn part2(input: &str) {
     let cards = input
         .lines()
-        .map(|line| parse_card(line).unwrap().1)
+        .map(|line| Card::parse(line).unwrap().1)
         .collect::<Vec<_>>();
 
     let mut cards_count = vec![1; cards.len()];
@@ -77,8 +81,7 @@ fn part2(input: &str) {
         (i..i + card.matches as usize).for_each(|j| cards_count[j + 1] += count);
     }
 
-    let sum = cards_count.iter().sum::<u32>();
-    println!("Part 2: {}", sum);
+    println!("Part 2: {}", cards_count.iter().sum::<u32>());
 }
 
 fn parse_number(i: &str) -> IResult<&str, u32> {
