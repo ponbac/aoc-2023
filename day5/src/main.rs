@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use nom::{character::complete::digit1, combinator::map_res, IResult};
+use std::{collections::HashMap, ops::Range};
 
 static EXAMPLE_INPUT: &str = r#"seeds: 79 14 55 13
 
@@ -51,10 +49,16 @@ fn parse_seeds(i: &str) -> Vec<Seed> {
     let x = i.lines().next().unwrap();
     let x = x.trim_start_matches("seeds: ");
     let x = x.split_whitespace();
-    let seed_ids = x.map(|s| s.parse::<u64>().unwrap()).collect::<Vec<_>>();
-    let seed_ids_map: HashMap<u64, ()> = seed_ids.iter().copied().map(|s| (s, ())).collect();
+    // numbers are a tuple, start index and length
+    // take the numbers two at a time
+    let numbers = x.map(|s| s.parse::<u64>().unwrap()).collect::<Vec<_>>();
+    let chunks = numbers.chunks_exact(2).collect::<Vec<_>>();
+    let seed_id_ranges: Vec<(u64, u64)> = chunks
+        .iter()
+        .map(|c| (c[0], c[1]))
+        .collect::<Vec<(u64, u64)>>();
 
-    println!("{:?}", seed_ids);
+    println!("{:?}", seed_id_ranges);
 
     let mut seed_to_soil_map: HashMap<u64, u64> = HashMap::new();
     let mut soil_to_fertilizer_map: HashMap<u64, u64> = HashMap::new();
@@ -86,7 +90,11 @@ fn parse_seeds(i: &str) -> Vec<Seed> {
         println!("filtering");
         let relevant_pairs = dest_range
             .zip(src_range)
-            .filter(|(_, src)| seed_ids_map.contains_key(src))
+            .filter(|(_, src)| {
+                seed_id_ranges
+                    .iter()
+                    .any(|(start, len)| src >= start && src < &(start + len))
+            })
             .collect::<Vec<_>>();
 
         println!("looping over src range with len {}", relevant_pairs.len());
@@ -279,31 +287,31 @@ fn parse_seeds(i: &str) -> Vec<Seed> {
     }
 
     let mut seeds = Vec::new();
-    for seed_id in seed_ids {
-        let soil = *seed_to_soil_map.get(&seed_id).unwrap_or(&seed_id);
-        let fertilizer = *soil_to_fertilizer_map.get(&soil).unwrap_or(&soil);
-        let water = *fertilizer_to_water_map
-            .get(&fertilizer)
-            .unwrap_or(&fertilizer);
-        let light = *water_to_light_map.get(&water).unwrap_or(&water);
-        let temperature = *light_to_temperature_map.get(&light).unwrap_or(&light);
-        let humidity = *temperature_to_humidity_map
-            .get(&temperature)
-            .unwrap_or(&temperature);
-        let location = *humidity_to_location_map.get(&humidity).unwrap_or(&humidity);
+    // for seed_id in seed_ids {
+    //     let soil = *seed_to_soil_map.get(&seed_id).unwrap_or(&seed_id);
+    //     let fertilizer = *soil_to_fertilizer_map.get(&soil).unwrap_or(&soil);
+    //     let water = *fertilizer_to_water_map
+    //         .get(&fertilizer)
+    //         .unwrap_or(&fertilizer);
+    //     let light = *water_to_light_map.get(&water).unwrap_or(&water);
+    //     let temperature = *light_to_temperature_map.get(&light).unwrap_or(&light);
+    //     let humidity = *temperature_to_humidity_map
+    //         .get(&temperature)
+    //         .unwrap_or(&temperature);
+    //     let location = *humidity_to_location_map.get(&humidity).unwrap_or(&humidity);
 
-        let seed = Seed {
-            id: seed_id,
-            soil,
-            fertilizer,
-            water,
-            light,
-            temperature,
-            humidity,
-            location,
-        };
-        seeds.push(seed);
-    }
+    //     let seed = Seed {
+    //         id: seed_id,
+    //         soil,
+    //         fertilizer,
+    //         water,
+    //         light,
+    //         temperature,
+    //         humidity,
+    //         location,
+    //     };
+    //     seeds.push(seed);
+    // }
 
     seeds
 }
@@ -311,11 +319,13 @@ fn parse_seeds(i: &str) -> Vec<Seed> {
 fn main() {
     println!("-- Advent of Code 2023 - Day 5 --");
 
-    // let input = EXAMPLE_INPUT;
-    let input = include_str!("input.txt");
+    let input = EXAMPLE_INPUT;
+    // let input = include_str!("input.txt");
 
-    part1(input);
-    // part2(input);
+    // part1(input);
+    let now = std::time::Instant::now();
+    part2(input);
+    println!("Time: {}ms", now.elapsed().as_millis());
 }
 
 fn part1(input: &str) {
@@ -330,9 +340,49 @@ fn part1(input: &str) {
 }
 
 fn part2(input: &str) {
-    todo!()
+    // let mut parts = input.split("\r\n\r\n");
+    let mut parts = input.split("\n\n"); // example line endings...
+
+    let seeds: Vec<(i64, i64)> = parts
+        .next()
+        .unwrap()
+        .split_whitespace()
+        .skip(1)
+        .map(|x| x.parse().unwrap())
+        .collect::<Vec<_>>()
+        .chunks(2)
+        .map(|s| (s[0], s[1]))
+        .collect();
+
+    let sections: Vec<_> = parts.map(parse_sections).collect();
+    let min_location = seeds
+        .into_iter()
+        .flat_map(|(start, len)| {
+            (start..start + len).map(|seed| {
+                sections.iter().fold(seed, |seed, section| {
+                    section
+                        .iter()
+                        .find_map(|(range, offset)| range.contains(&seed).then_some(seed + offset))
+                        .unwrap_or(seed)
+                })
+            })
+        })
+        .min()
+        .unwrap();
+
+    println!("Part 2: {}", min_location);
 }
 
-fn parse_number(i: &str) -> IResult<&str, u64> {
-    map_res(digit1, |s: &str| s.parse::<u64>())(i)
+fn parse_sections(input: &str) -> Vec<(Range<i64>, i64)> {
+    input
+        .lines()
+        .skip(1)
+        .map(|l| {
+            let numbers: Vec<i64> = l.split_whitespace().map(|x| x.parse().unwrap()).collect();
+
+            let range = numbers[1]..numbers[1] + numbers[2];
+            let offset = numbers[0] - numbers[1];
+            (range, offset)
+        })
+        .collect()
 }
