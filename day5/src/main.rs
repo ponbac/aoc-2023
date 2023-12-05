@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 static EXAMPLE_INPUT: &str = r#"seeds: 79 14 55 13
 
 seed-to-soil map:
@@ -90,9 +92,9 @@ fn part2(input: &str) {
 
     let sections: Vec<_> = parts.map(parse_sections).collect();
     let min_location = seeds
-        .into_iter()
+        .into_par_iter()
         .flat_map(|(start, len)| {
-            (start..start + len).map(|seed| {
+            (start..start + len).into_par_iter().map(|seed| {
                 sections.iter().fold(seed, |seed, section| {
                     section
                         .iter()
