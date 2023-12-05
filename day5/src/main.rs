@@ -47,7 +47,7 @@ fn main() {
     println!("Time: {}ms", (now.elapsed().as_micros() as f64 / 1000.0));
     let now = std::time::Instant::now();
     part2(input);
-    println!("Time: {}s", now.elapsed().as_secs());
+    println!("Time: {}s", now.elapsed().as_millis() as f64 / 1000.0);
 }
 
 fn part1(input: &str) {
