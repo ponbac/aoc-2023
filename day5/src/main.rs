@@ -42,10 +42,12 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    let now = std::time::Instant::now();
     part1(input);
+    println!("Time: {}ms", (now.elapsed().as_micros() as f64 / 1000.0));
     let now = std::time::Instant::now();
     part2(input);
-    println!("Time: {}ms", now.elapsed().as_millis());
+    println!("Time: {}s", now.elapsed().as_secs());
 }
 
 fn part1(input: &str) {
