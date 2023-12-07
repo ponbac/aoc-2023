@@ -10,7 +10,9 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    let start = std::time::Instant::now();
     part1(input);
+    println!("Part 1: {}ms", start.elapsed().as_millis());
     // part2(input);
 }
 
@@ -33,7 +35,6 @@ fn part1(input: &str) {
         let hand1_rank = if try_with_every_joker(hand1, is_five_of_a_kind) {
             1
         } else if try_with_every_joker(hand1, is_four_of_a_kind) {
-            println!("four of a kind: {:?}", hand1);
             2
         } else if try_with_every_joker(hand1, is_full_house) {
             3
@@ -52,7 +53,6 @@ fn part1(input: &str) {
         let hand2_rank = if try_with_every_joker(hand2, is_five_of_a_kind) {
             1
         } else if try_with_every_joker(hand2, is_four_of_a_kind) {
-            println!("four of a kind: {:?}", hand2);
             2
         } else if try_with_every_joker(hand2, is_full_house) {
             3
@@ -74,12 +74,6 @@ fn part1(input: &str) {
             std::cmp::Ordering::Greater
         } else if hand1_rank == hand2_rank {
             if compare_equal_hands(hand1, hand2, &card_ranking) {
-                println!(
-                    "{} > {}",
-                    hand1.iter().collect::<String>(),
-                    hand2.iter().collect::<String>()
-                );
-                println!("{} > {}", hand1_rank, hand2_rank);
                 return std::cmp::Ordering::Greater;
             }
             std::cmp::Ordering::Less
@@ -96,13 +90,6 @@ fn part1(input: &str) {
         .for_each(|(i, (hand, rank))| {
             let winnings = rank * (i + 1);
             total += winnings;
-            println!(
-                "{}: {} ({} * {})",
-                i + 1,
-                hand.iter().collect::<String>(),
-                rank,
-                i + 1
-            );
         });
 
     println!("{:?}", total);
