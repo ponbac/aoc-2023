@@ -1,3 +1,5 @@
+use std::cmp;
+
 static EXAMPLE_INPUT: &str = r#"32T3K 765
 T55J5 684
 KK677 28
@@ -68,17 +70,15 @@ fn part1(input: &str) {
             panic!("Unknown hand: {:?}", hand2);
         };
 
-        if hand1_rank < hand2_rank {
-            std::cmp::Ordering::Less
-        } else if hand1_rank > hand2_rank {
-            std::cmp::Ordering::Greater
-        } else if hand1_rank == hand2_rank {
-            if compare_equal_hands(hand1, hand2, &card_ranking) {
-                return std::cmp::Ordering::Greater;
+        match hand1_rank.cmp(&hand2_rank) {
+            cmp::Ordering::Less => cmp::Ordering::Less,
+            cmp::Ordering::Greater => cmp::Ordering::Greater,
+            cmp::Ordering::Equal => {
+                if compare_equal_hands(hand1, hand2, &card_ranking) {
+                    return cmp::Ordering::Greater;
+                }
+                cmp::Ordering::Less
             }
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Greater
         }
     });
 
@@ -192,10 +192,10 @@ fn compare_equal_hands(hand1: &[char], hand2: &[char], card_rankings: &[char]) -
             .iter()
             .position(|&card| card == card2)
             .unwrap();
-        if card1_rank > card2_rank {
-            return true;
-        } else if card1_rank < card2_rank {
-            return false;
+        match card1_rank.cmp(&card2_rank) {
+            cmp::Ordering::Less => return false,
+            cmp::Ordering::Greater => return true,
+            cmp::Ordering::Equal => continue,
         }
     }
 
