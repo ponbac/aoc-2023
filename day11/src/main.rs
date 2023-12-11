@@ -14,45 +14,44 @@ static EXAMPLE_INPUT: &str = r#"
 "#;
 
 #[derive(Debug, PartialEq, Eq)]
-struct Grid {
-    data: Vec<Vec<char>>,
+struct SpaceGrid {
+    galaxies: Vec<(usize, usize)>,
     empty_rows: Vec<usize>,
     empty_cols: Vec<usize>,
 }
 
-impl fmt::Display for Grid {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in &self.data {
-            for c in row {
-                write!(f, "{}", c)?;
-            }
-            writeln!(f)?;
-        }
-        Ok(())
-    }
-}
-
-impl Grid {
+impl SpaceGrid {
     fn new(input: &str) -> Self {
-        let data: Vec<Vec<char>> = input
+        let grid: Vec<Vec<char>> = input
             .trim()
             .lines()
             .map(|line| line.chars().collect())
             .collect();
 
-        let empty_rows: Vec<usize> = data
+        let galaxies: Vec<(usize, usize)> = grid
+            .iter()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .filter(|(_, &c)| c == '#')
+                    .map(move |(x, _)| (x, y))
+            })
+            .collect();
+
+        let empty_rows: Vec<usize> = grid
             .iter()
             .enumerate()
             .filter(|(_, row)| row.iter().all(|&c| c == '.'))
             .map(|(i, _)| i)
             .collect();
 
-        let empty_cols: Vec<usize> = (0..data[0].len())
-            .filter(|&col| data.iter().all(|row| row[col] == '.'))
+        let empty_cols: Vec<usize> = (0..grid[0].len())
+            .filter(|&col| grid.iter().all(|row| row[col] == '.'))
             .collect();
 
         Self {
-            data,
+            galaxies,
             empty_rows,
             empty_cols,
         }
@@ -107,31 +106,17 @@ fn main() {
 }
 
 fn part1(input: &str) {
-    let grid = Grid::new(input);
+    let grid = SpaceGrid::new(input);
 
-    // println!("Grid:\n{}", grid);
     println!("Empty cols: {:?}", grid.empty_cols);
     println!("Empty rows: {:?}", grid.empty_rows);
-
-    let galaxies: Vec<(usize, usize)> = grid
-        .data
-        .iter()
-        .enumerate()
-        .flat_map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .filter(|(_, &c)| c == '#')
-                .map(move |(x, _)| (x, y))
-        })
-        .collect();
-
-    // println!("Galaxies: {:?}", galaxies);
+    // println!("Galaxies: {:?}", grid.galaxies);
 
     // calc distance between each pair of galaxies
     let mut part1_distances = Vec::new();
     let mut part2_distances = Vec::new();
-    for (i, galaxy) in galaxies.iter().enumerate() {
-        for other_galaxy in &galaxies[i + 1..] {
+    for (i, galaxy) in grid.galaxies.iter().enumerate() {
+        for other_galaxy in &grid.galaxies[i + 1..] {
             let p1_distance = grid.walk_distance_between(*galaxy, *other_galaxy, 2);
             let p2_distance = grid.walk_distance_between(*galaxy, *other_galaxy, 1_000_000);
 
