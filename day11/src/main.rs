@@ -1,5 +1,3 @@
-use core::fmt;
-
 static EXAMPLE_INPUT: &str = r#"
 ...#......
 .......#..
