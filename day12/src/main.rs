@@ -15,6 +15,11 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    // rayon::ThreadPoolBuilder::new()
+    //     .num_threads(2)
+    //     .build_global()
+    //     .unwrap();
+
     let start = std::time::Instant::now();
     part1(input);
     println!("Time: {:?}\n", start.elapsed());
