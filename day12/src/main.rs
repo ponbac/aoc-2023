@@ -1,4 +1,7 @@
-use std::{collections::HashSet, iter::repeat};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::repeat,
+};
 
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
@@ -12,51 +15,51 @@ static EXAMPLE_INPUT: &str = r#"???.### 1,1,3
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 12 --");
 
-    // let input = EXAMPLE_INPUT;
-    let input = include_str!("input.txt");
+    let input = EXAMPLE_INPUT;
+    // let input = include_str!("input.txt");
 
     // rayon::ThreadPoolBuilder::new()
     //     .num_threads(1)
     //     .build_global()
     //     .unwrap();
 
-    let start = std::time::Instant::now();
-    part1(input);
-    println!("Time: {:?}\n", start.elapsed());
+    // let start = std::time::Instant::now();
+    // part1(input);
+    // println!("Time: {:?}\n", start.elapsed());
     part2(input);
 }
 
-fn part1(input: &str) {
-    let lines: Vec<(Vec<u8>, Vec<u8>)> = input
-        .lines()
-        .map(|line| {
-            let mut parts = line.split_whitespace();
-            let pattern = parts.next().unwrap().chars().map(|c| c as u8).collect();
-            let numbers = parts
-                .next()
-                .unwrap()
-                .split(',')
-                .map(|n| n.parse::<u8>().unwrap())
-                .collect();
-            (pattern, numbers)
-        })
-        .collect();
+// fn part1(input: &str) {
+//     let lines: Vec<(Vec<u8>, Vec<u8>)> = input
+//         .lines()
+//         .map(|line| {
+//             let mut parts = line.split_whitespace();
+//             let pattern = parts.next().unwrap().chars().map(|c| c as u8).collect();
+//             let numbers = parts
+//                 .next()
+//                 .unwrap()
+//                 .split(',')
+//                 .map(|n| n.parse::<u8>().unwrap())
+//                 .collect();
+//             (pattern, numbers)
+//         })
+//         .collect();
 
-    let arrangement_sums = (0..lines.len())
-        .into_par_iter()
-        .enumerate()
-        .map(|(i, _)| {
-            let (pattern, numbers) = &lines[i];
-            let count = count_arrangements(
-                pattern, numbers, 0, //, &mut HashSet::new()
-            );
-            println!("{}: {:?}", i, pattern);
-            count
-        })
-        .collect::<Vec<_>>();
+//     let arrangement_sums = (0..lines.len())
+//         .into_par_iter()
+//         .enumerate()
+//         .map(|(i, _)| {
+//             let (pattern, numbers) = &lines[i];
+//             let count = count_arrangements(
+//                 pattern, numbers, 0, //, &mut HashSet::new()
+//             );
+//             println!("{}: {:?}", i, pattern);
+//             count
+//         })
+//         .collect::<Vec<_>>();
 
-    println!("Part 1: {:?}", arrangement_sums.iter().sum::<usize>());
-}
+//     println!("Part 1: {:?}", arrangement_sums.iter().sum::<usize>());
+// }
 
 fn part2(_input: &str) {
     let lines: Vec<(Vec<u8>, Vec<u8>)> = _input
@@ -87,11 +90,9 @@ fn part2(_input: &str) {
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
-            let count = count_arrangements(
-                pattern, numbers, 0,
-                // &mut HashSet::new()
-            );
-            println!("{}: {:?}", i, pattern);
+            println!("Starting {}: {:?}", i, pattern);
+            let count = count_arrangements(pattern, numbers, 0, &mut HashMap::new());
+            println!("Finished {}: {:?}", i, pattern);
             count
         })
         .sum::<usize>();
@@ -99,11 +100,18 @@ fn part2(_input: &str) {
     println!("Part 2: {:?}", sum);
 }
 
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct MemoKey {
+    pattern: Vec<u8>,
+    numbers: Vec<u8>,
+    start: usize,
+}
+
 fn count_arrangements(
     pattern: &[u8],
     numbers: &[u8],
     start: usize,
-    // cache: &mut HashSet<Vec<u8>>,
+    cache: &mut HashMap<MemoKey, usize>,
 ) -> usize {
     if start >= pattern.len() {
         return if is_valid_arrangement(pattern, numbers) {
@@ -114,26 +122,33 @@ fn count_arrangements(
     }
 
     if pattern[start] != b'?' {
-        return count_arrangements(
-            pattern,
-            numbers,
-            start + 1, // , cache
-        );
+        return count_arrangements(pattern, numbers, start + 1, cache);
+    }
+
+    let key = MemoKey {
+        pattern: pattern[..start].to_vec(),
+        numbers: numbers.to_vec(),
+        start,
+    };
+
+    if let Some(&count) = cache.get(&key) {
+        return count;
     }
 
     let mut total = 0;
     let mut new_pattern = pattern.to_vec();
     for &c in &[b'#', b'.'] {
         new_pattern[start] = c;
-        // if !cache.contains(&new_pattern) {
-        //     cache.insert(new_pattern.clone());
         if can_be_valid(&new_pattern, numbers, start) {
-            total += count_arrangements(
-                &new_pattern,
-                numbers,
-                start + 1, // , cache
+            total += count_arrangements(&new_pattern, numbers, start + 1, cache);
+            cache.insert(
+                MemoKey {
+                    pattern: new_pattern[..start].to_vec(),
+                    numbers: numbers.to_vec(),
+                    start: start + 1,
+                },
+                total,
             );
-            // }
         }
     }
 
