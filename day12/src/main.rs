@@ -16,7 +16,7 @@ fn main() {
     let input = include_str!("input.txt");
 
     // rayon::ThreadPoolBuilder::new()
-    //     .num_threads(2)
+    //     .num_threads(1)
     //     .build_global()
     //     .unwrap();
 
@@ -27,16 +27,16 @@ fn main() {
 }
 
 fn part1(input: &str) {
-    let lines: Vec<(Vec<char>, Vec<usize>)> = input
+    let lines: Vec<(Vec<u8>, Vec<u8>)> = input
         .lines()
         .map(|line| {
             let mut parts = line.split_whitespace();
-            let pattern = parts.next().unwrap().chars().collect();
+            let pattern = parts.next().unwrap().chars().map(|c| c as u8).collect();
             let numbers = parts
                 .next()
                 .unwrap()
                 .split(',')
-                .map(|n| n.parse::<usize>().unwrap())
+                .map(|n| n.parse::<u8>().unwrap())
                 .collect();
             (pattern, numbers)
         })
@@ -47,24 +47,19 @@ fn part1(input: &str) {
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
-            let count = count_arrangements(pattern, numbers, 0, &mut HashSet::new());
+            let count = count_arrangements(
+                pattern, numbers, 0, //, &mut HashSet::new()
+            );
             println!("{}: {:?}", i, pattern);
             count
         })
         .collect::<Vec<_>>();
 
     println!("Part 1: {:?}", arrangement_sums.iter().sum::<usize>());
-    println!(
-        "Part 2: {:?}",
-        arrangement_sums
-            .iter()
-            .map(|&n| n.pow(5) * 2_usize.pow(4))
-            .sum::<usize>()
-    );
 }
 
 fn part2(_input: &str) {
-    let lines: Vec<(Vec<char>, Vec<usize>)> = _input
+    let lines: Vec<(Vec<u8>, Vec<u8>)> = _input
         .lines()
         .map(|line| {
             let mut parts = line.split_whitespace();
@@ -73,7 +68,7 @@ fn part2(_input: &str) {
                 .take(5)
                 .collect::<Vec<_>>()
                 .join("?");
-            let pattern = repeated_pattern_part.chars().collect();
+            let pattern = repeated_pattern_part.chars().map(|c| c as u8).collect();
 
             let repeated_numbers_part = repeat(parts.next().unwrap())
                 .take(5)
@@ -81,7 +76,7 @@ fn part2(_input: &str) {
                 .join(",");
             let numbers = repeated_numbers_part
                 .split(',')
-                .map(|n| n.parse::<usize>().unwrap())
+                .map(|n| n.parse::<u8>().unwrap())
                 .collect();
             (pattern, numbers)
         })
@@ -92,7 +87,10 @@ fn part2(_input: &str) {
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
-            let count = count_arrangements(pattern, numbers, 0, &mut HashSet::new());
+            let count = count_arrangements(
+                pattern, numbers, 0,
+                // &mut HashSet::new()
+            );
             println!("{}: {:?}", i, pattern);
             count
         })
@@ -102,10 +100,10 @@ fn part2(_input: &str) {
 }
 
 fn count_arrangements(
-    pattern: &[char],
-    numbers: &[usize],
+    pattern: &[u8],
+    numbers: &[u8],
     start: usize,
-    cache: &mut HashSet<Vec<char>>,
+    // cache: &mut HashSet<Vec<u8>>,
 ) -> usize {
     if start >= pattern.len() {
         return if is_valid_arrangement(pattern, numbers) {
@@ -115,31 +113,39 @@ fn count_arrangements(
         };
     }
 
-    if pattern[start] != '?' {
-        return count_arrangements(pattern, numbers, start + 1, cache);
+    if pattern[start] != b'?' {
+        return count_arrangements(
+            pattern,
+            numbers,
+            start + 1, // , cache
+        );
     }
 
     let mut total = 0;
     let mut new_pattern = pattern.to_vec();
-    for &c in &['#', '.'] {
+    for &c in &[b'#', b'.'] {
         new_pattern[start] = c;
-        if !cache.contains(&new_pattern) {
-            cache.insert(new_pattern.clone());
-            if can_be_valid(&new_pattern, numbers, start) {
-                total += count_arrangements(&new_pattern, numbers, start + 1, cache);
-            }
+        // if !cache.contains(&new_pattern) {
+        //     cache.insert(new_pattern.clone());
+        if can_be_valid(&new_pattern, numbers, start) {
+            total += count_arrangements(
+                &new_pattern,
+                numbers,
+                start + 1, // , cache
+            );
+            // }
         }
     }
 
     total
 }
 
-fn is_valid_arrangement(pattern: &[char], numbers: &[usize]) -> bool {
+fn is_valid_arrangement(pattern: &[u8], numbers: &[u8]) -> bool {
     let mut counts = vec![];
     let mut current_count = 0;
 
     for &c in pattern {
-        if c == '#' {
+        if c == b'#' {
             current_count += 1;
         } else if current_count > 0 {
             counts.push(current_count);
@@ -154,14 +160,14 @@ fn is_valid_arrangement(pattern: &[char], numbers: &[usize]) -> bool {
     counts == numbers
 }
 
-fn can_be_valid(pattern: &[char], numbers: &[usize], upto: usize) -> bool {
+fn can_be_valid(pattern: &[u8], numbers: &[u8], upto: usize) -> bool {
     let mut num_counts = vec![0; numbers.len()];
     let mut current_group = 0;
     let mut has_broken_spring = false;
 
     for &c in &pattern[..=upto] {
         match c {
-            '#' => {
+            b'#' => {
                 has_broken_spring = true;
                 if current_group < numbers.len() {
                     num_counts[current_group] += 1;
@@ -169,7 +175,7 @@ fn can_be_valid(pattern: &[char], numbers: &[usize], upto: usize) -> bool {
                     return false;
                 }
             }
-            '.' => {
+            b'.' => {
                 if has_broken_spring {
                     has_broken_spring = false;
                     current_group += 1;
