@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter::repeat,
-};
+use std::{collections::HashMap, iter::repeat};
 
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
@@ -62,7 +59,7 @@ fn main() {
 // }
 
 fn part2(_input: &str) {
-    let lines: Vec<(Vec<u8>, Vec<u8>)> = _input
+    let lines: Vec<(Vec<u8>, Vec<usize>)> = _input
         .lines()
         .map(|line| {
             let mut parts = line.split_whitespace();
@@ -79,20 +76,19 @@ fn part2(_input: &str) {
                 .join(",");
             let numbers = repeated_numbers_part
                 .split(',')
-                .map(|n| n.parse::<u8>().unwrap())
+                .map(|n| n.parse::<usize>().unwrap())
                 .collect();
             (pattern, numbers)
         })
         .collect();
 
     let sum = (0..lines.len())
-        .into_par_iter()
+        // .into_par_iter()
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
-            println!("Starting {}: {:?}", i, pattern);
-            let count = count_arrangements(pattern, numbers, 0, &mut HashMap::new());
-            println!("Finished {}: {:?}", i, pattern);
+            let count = count_arrangements(pattern, numbers, 0, 0, 0, &mut HashMap::new());
+            println!("{}, finished: {}", i, count);
             count
         })
         .sum::<usize>();
@@ -102,113 +98,158 @@ fn part2(_input: &str) {
 
 #[derive(Hash, PartialEq, Eq, Clone)]
 struct MemoKey {
-    pattern: Vec<u8>,
-    numbers: Vec<u8>,
-    start: usize,
+    pattern_index: usize,
+    number_index: usize,
+    current_count: usize,
 }
 
 fn count_arrangements(
     pattern: &[u8],
-    numbers: &[u8],
-    start: usize,
+    numbers: &[usize],
+    pattern_index: usize,
+    number_index: usize,
+    current_count: usize,
     cache: &mut HashMap<MemoKey, usize>,
 ) -> usize {
-    if start >= pattern.len() {
-        return if is_valid_arrangement(pattern, numbers) {
-            1
-        } else {
-            0
-        };
-    }
-
-    if pattern[start] != b'?' {
-        return count_arrangements(pattern, numbers, start + 1, cache);
-    }
-
-    let key = MemoKey {
-        pattern: pattern[..start].to_vec(),
-        numbers: numbers.to_vec(),
-        start,
-    };
-
-    if let Some(&count) = cache.get(&key) {
+    if let Some(&count) = cache.get(&MemoKey {
+        pattern_index,
+        number_index,
+        current_count,
+    }) {
         return count;
     }
 
-    let mut total = 0;
-    let mut new_pattern = pattern.to_vec();
-    for &c in &[b'#', b'.'] {
-        new_pattern[start] = c;
-        if can_be_valid(&new_pattern, numbers, start) {
-            total += count_arrangements(&new_pattern, numbers, start + 1, cache);
+    let mut pattern_index = pattern_index;
+    let mut number_index = number_index;
+    let mut current_count = current_count;
+
+    loop {
+        if pattern_index >= pattern.len() {
+            if (number_index > numbers.len() - 1 && current_count == 0)
+                || (number_index == numbers.len() - 1 && current_count == numbers[number_index])
+            {
+                cache.insert(
+                    MemoKey {
+                        pattern_index,
+                        number_index,
+                        current_count,
+                    },
+                    1,
+                );
+                return 1;
+            }
+
             cache.insert(
                 MemoKey {
-                    pattern: new_pattern[..start].to_vec(),
-                    numbers: numbers.to_vec(),
-                    start: start + 1,
+                    pattern_index,
+                    number_index,
+                    current_count,
                 },
-                total,
+                0,
             );
+            return 0;
         }
-    }
 
-    total
-}
-
-fn is_valid_arrangement(pattern: &[u8], numbers: &[u8]) -> bool {
-    let mut counts = vec![];
-    let mut current_count = 0;
-
-    for &c in pattern {
-        if c == b'#' {
-            current_count += 1;
-        } else if current_count > 0 {
-            counts.push(current_count);
-            current_count = 0;
-        }
-    }
-
-    if current_count > 0 {
-        counts.push(current_count);
-    }
-
-    counts == numbers
-}
-
-fn can_be_valid(pattern: &[u8], numbers: &[u8], upto: usize) -> bool {
-    let mut num_counts = vec![0; numbers.len()];
-    let mut current_group = 0;
-    let mut has_broken_spring = false;
-
-    for &c in &pattern[..=upto] {
-        match c {
+        match pattern[pattern_index] {
+            b'?' => break,
             b'#' => {
-                has_broken_spring = true;
-                if current_group < numbers.len() {
-                    num_counts[current_group] += 1;
-                } else {
-                    return false;
+                if number_index > numbers.len() - 1 {
+                    cache.insert(
+                        MemoKey {
+                            pattern_index,
+                            number_index,
+                            current_count,
+                        },
+                        0,
+                    );
+                    return 0;
                 }
+
+                if current_count == numbers[number_index] {
+                    cache.insert(
+                        MemoKey {
+                            pattern_index,
+                            number_index,
+                            current_count,
+                        },
+                        0,
+                    );
+                    return 0;
+                }
+
+                current_count += 1;
+                pattern_index += 1;
             }
             b'.' => {
-                if has_broken_spring {
-                    has_broken_spring = false;
-                    current_group += 1;
+                if current_count == 0 {
+                    pattern_index += 1;
+                } else if current_count == numbers[number_index] {
+                    pattern_index += 1;
+                    current_count = 0;
+                    number_index += 1;
+                } else {
+                    cache.insert(
+                        MemoKey {
+                            pattern_index,
+                            number_index,
+                            current_count,
+                        },
+                        0,
+                    );
+                    return 0;
                 }
             }
-            _ => {}
+            _ => unreachable!(),
         }
     }
 
-    for (i, &count) in num_counts.iter().enumerate() {
-        if i <= current_group {
-            if count > numbers[i] {
-                return false;
-            }
-        } else if count > 0 {
-            return false;
+    let mut total = 0;
+
+    if current_count == 0 {
+        if number_index < numbers.len() {
+            total +=
+                count_arrangements(pattern, numbers, pattern_index + 1, number_index, 1, cache)
+                    + count_arrangements(
+                        pattern,
+                        numbers,
+                        pattern_index + 1,
+                        number_index,
+                        0,
+                        cache,
+                    );
+        } else {
+            total +=
+                count_arrangements(pattern, numbers, pattern_index + 1, number_index, 0, cache);
         }
+    } else if number_index > numbers.len() - 1 {
+        total += 0;
+    } else if current_count == numbers[number_index] {
+        total += count_arrangements(
+            pattern,
+            numbers,
+            pattern_index + 1,
+            number_index + 1,
+            0,
+            cache,
+        );
+    } else {
+        total += count_arrangements(
+            pattern,
+            numbers,
+            pattern_index + 1,
+            number_index,
+            current_count + 1,
+            cache,
+        );
     }
 
-    true
+    cache.insert(
+        MemoKey {
+            pattern_index,
+            number_index,
+            current_count,
+        },
+        total,
+    );
+    total
 }
