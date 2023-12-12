@@ -122,16 +122,7 @@ fn count_arrangements(
             let valid_end = (number_index == numbers.len() && damaged_count == 0) // gone past but no damage
                 || (number_index == numbers.len() - 1 && damaged_count == numbers[number_index]); // at last number and correct damage
 
-            let result = if valid_end { 1 } else { 0 };
-            cache.insert(
-                MemoKey {
-                    pattern_index,
-                    number_index,
-                    damaged_count,
-                },
-                result,
-            );
-            return result;
+            return if valid_end { 1 } else { 0 };
         }
 
         match pattern[pattern_index] {
@@ -141,14 +132,6 @@ fn count_arrangements(
                     number_index > numbers.len() - 1 || damaged_count > numbers[number_index];
 
                 if invalid_damage {
-                    cache.insert(
-                        MemoKey {
-                            pattern_index,
-                            number_index,
-                            damaged_count,
-                        },
-                        0,
-                    );
                     return 0;
                 }
 
@@ -166,14 +149,6 @@ fn count_arrangements(
                     damaged_count = 0;
                 } else {
                     // invalid end of group
-                    cache.insert(
-                        MemoKey {
-                            pattern_index,
-                            number_index,
-                            damaged_count,
-                        },
-                        0,
-                    );
                     return 0;
                 }
             }
