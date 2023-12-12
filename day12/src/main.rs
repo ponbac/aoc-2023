@@ -57,21 +57,23 @@ fn part2(_input: &str) {
         .map(|line| {
             let mut parts = line.split_whitespace();
 
-            let repeated_pattern_part = repeat(parts.next().unwrap())
+            let repeated_pattern = repeat(parts.next().unwrap())
                 .take(5)
                 .collect::<Vec<_>>()
-                .join("?");
-            let pattern = repeated_pattern_part.chars().map(|c| c as u8).collect();
+                .join("?")
+                .chars()
+                .map(|c| c as u8)
+                .collect::<Vec<_>>();
 
-            let repeated_numbers_part = repeat(parts.next().unwrap())
+            let repeated_numbers = repeat(parts.next().unwrap())
                 .take(5)
                 .collect::<Vec<_>>()
-                .join(",");
-            let numbers = repeated_numbers_part
+                .join(",")
                 .split(',')
                 .map(|n| n.parse::<usize>().unwrap())
-                .collect();
-            (pattern, numbers)
+                .collect::<Vec<_>>();
+
+            (repeated_pattern, repeated_numbers)
         })
         .collect();
 
@@ -80,9 +82,7 @@ fn part2(_input: &str) {
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
-            let count = count_arrangements(pattern, numbers, 0, 0, 0, &mut HashMap::new());
-            // println!("{}, finished: {}", i, count);
-            count
+            count_arrangements(pattern, numbers, 0, 0, 0, &mut HashMap::new())
         })
         .sum::<usize>();
 
@@ -221,7 +221,7 @@ fn count_arrangements(
             damaged_count + 1,
             cache,
         );
-    }
+    };
 
     cache.insert(
         MemoKey {
