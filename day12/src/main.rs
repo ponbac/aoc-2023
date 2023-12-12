@@ -12,13 +12,13 @@ static EXAMPLE_INPUT: &str = r#"???.### 1,1,3
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 12 --");
 
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
 
     let start = std::time::Instant::now();
     part1(input);
     println!("Time: {:?}\n", start.elapsed());
-    // part2(input);
+    part2(input);
 }
 
 fn part1(input: &str) {
