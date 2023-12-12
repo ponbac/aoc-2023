@@ -1,8 +1,6 @@
 use std::{collections::HashSet, iter::repeat};
 
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
 static EXAMPLE_INPUT: &str = r#"???.### 1,1,3
 .??..??...?##. 1,1,3
@@ -17,8 +15,10 @@ fn main() {
     let input = EXAMPLE_INPUT;
     // let input = include_str!("input.txt");
 
+    let start = std::time::Instant::now();
     part1(input);
-    part2(input);
+    println!("Time: {:?}\n", start.elapsed());
+    // part2(input);
 }
 
 fn part1(input: &str) {
@@ -37,13 +37,25 @@ fn part1(input: &str) {
         })
         .collect();
 
-    let mut sum = 0;
-    for (i, (pattern, numbers)) in lines.iter().enumerate() {
-        sum += count_arrangements(pattern, numbers, 0, &mut HashSet::new());
-        println!("{}: {:?}", i, pattern);
-    }
+    let arrangement_sums = (0..lines.len())
+        .into_par_iter()
+        .enumerate()
+        .map(|(i, _)| {
+            let (pattern, numbers) = &lines[i];
+            let count = count_arrangements(pattern, numbers, 0, &mut HashSet::new());
+            println!("{}: {:?}", i, pattern);
+            count
+        })
+        .collect::<Vec<_>>();
 
-    println!("Part 1: {:?}", sum);
+    println!("Part 1: {:?}", arrangement_sums.iter().sum::<usize>());
+    println!(
+        "Part 2: {:?}",
+        arrangement_sums
+            .iter()
+            .map(|&n| n.pow(5) * 2_usize.pow(4))
+            .sum::<usize>()
+    );
 }
 
 fn part2(_input: &str) {
