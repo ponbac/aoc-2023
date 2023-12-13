@@ -53,13 +53,7 @@ fn part1(input: &str) {
         // Part 2
         // for every char in the grid, try flipping its value and see if any reflections are found
         'outer: for i in 0..grid.len() {
-            if lines_above_horizontal > 0 && i == lines_above_horizontal - 1 {
-                continue;
-            }
             for j in 0..grid[0].len() {
-                if columns_left_vertical > 0 && j == columns_left_vertical - 1 {
-                    continue;
-                }
                 let mut grid = grid.clone();
                 grid[i][j] = match grid[i][j] {
                     '#' => '.',
@@ -74,14 +68,6 @@ fn part1(input: &str) {
                 let columns_left_vertical = columns_left_vertical.unwrap_or(0);
 
                 if lines_above_horizontal != 0 || columns_left_vertical != 0 {
-                    for row in &grid {
-                        println!("{}", row.iter().collect::<String>());
-                    }
-
-                    println!(
-                        "Part 2: lines_above_horizontal: {}, columns_left_vertical: {}",
-                        lines_above_horizontal, columns_left_vertical
-                    );
                     sum_2 += lines_above_horizontal * 100 + columns_left_vertical;
                     break 'outer;
                 }
@@ -89,8 +75,8 @@ fn part1(input: &str) {
         }
     }
 
-    println!("\nPart 1: {}\n", sum);
-    println!("\nPart 2: {}\n", sum_2);
+    println!("\nPart 1: {}", sum);
+    println!("Part 2: {}", sum_2);
 }
 
 fn part2(_input: &str) {
