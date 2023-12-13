@@ -9,10 +9,13 @@ static EXAMPLE_INPUT: &str = r#"???.### 1,1,3
 ????.######..#####. 1,6,5
 ?###???????? 3,2,1"#;
 
+static EXAMPLE_INPUT_2: &str = r#"????????#??? 2,3"#;
+
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 12 --");
 
     // let input = EXAMPLE_INPUT;
+    // let input = EXAMPLE_INPUT_2;
     let input = include_str!("input.txt");
 
     let start = std::time::Instant::now();
@@ -78,7 +81,7 @@ fn part2(_input: &str) {
         .collect();
 
     let sum = (0..lines.len())
-        // .into_par_iter()
+        .into_par_iter()
         .enumerate()
         .map(|(i, _)| {
             let (pattern, numbers) = &lines[i];
