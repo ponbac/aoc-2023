@@ -153,9 +153,8 @@ impl Grid {
             .enumerate()
             .map(|(y, row)| {
                 row.iter()
-                    .enumerate()
-                    .filter(|(_, &c)| c == 'O')
-                    .map(|(_, _)| self.height - y)
+                    .filter(|&c| c == &'O')
+                    .map(|_| self.height - y)
                     .sum::<usize>()
             })
             .sum::<usize>()
