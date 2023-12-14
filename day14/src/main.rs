@@ -29,77 +29,6 @@ impl fmt::Display for Grid {
     }
 }
 
-fn main() {
-    println!("\n-- Advent of Code 2023 - Day 14 --");
-
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
-
-    // part1(input);
-    part2(input);
-}
-
-fn part1(input: &str) {
-    let mut grid = Grid::new(input);
-    println!("{}", grid);
-
-    // tilt all rocks north, until they hit a wall, another rock or a '#'
-    let mut iter_movement = 0;
-    loop {
-        for y in 0..grid.height {
-            for x in 0..grid.width {
-                let c = grid.get(x, y).unwrap();
-                if c == 'O' {
-                    // check if we can move north
-                    if y == 0 {
-                        // we hit a wall, so we can't move north
-                        continue;
-                    }
-
-                    let north = grid.get(x, y - 1).unwrap();
-                    if north == '#' || north == 'O' {
-                        // we hit a rock or another rock, so we can't move north
-                        continue;
-                    }
-
-                    // we can move north, so move the rock
-                    grid.set(x, y, '.');
-                    grid.set(x, y - 1, 'O');
-                    iter_movement += 1;
-                }
-            }
-        }
-
-        if iter_movement == 0 {
-            break;
-        } else {
-            iter_movement = 0;
-        }
-    }
-
-    let total_load = grid
-        .data
-        .iter()
-        .enumerate()
-        .map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .filter(|(_, &c)| c == 'O')
-                .map(|(_, _)| grid.height - y)
-                .sum::<usize>()
-        })
-        .sum::<usize>();
-
-    println!("Total load: {}", total_load);
-}
-
-enum Direction {
-    North,
-    West,
-    South,
-    East,
-}
-
 impl Grid {
     fn new(input: &str) -> Self {
         let data = input
@@ -208,14 +137,13 @@ impl Grid {
                             }
                             _ => unreachable!(),
                         }
-
-                        if iter_movement == 0 {
-                            break;
-                        } else {
-                            iter_movement = 0;
-                        }
                     }
                 }
+            }
+            if iter_movement == 0 {
+                break;
+            } else {
+                iter_movement = 0;
             }
         }
     }
@@ -235,11 +163,36 @@ impl Grid {
     }
 }
 
+enum Direction {
+    North,
+    West,
+    South,
+    East,
+}
+
+fn main() {
+    println!("\n-- Advent of Code 2023 - Day 14 --");
+
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
+
+    part1(input);
+    part2(input);
+}
+
+fn part1(input: &str) {
+    let mut grid = Grid::new(input);
+    println!("{}", grid);
+
+    // tilt all rocks north, until they hit a wall, another rock or a '#'
+    grid.slide(&Direction::North);
+    println!("Part 1: {}", grid.north_load());
+}
+
 fn part2(input: &str) {
     let mut grid = Grid::new(input);
     // println!("{}", grid);
 
-    // Each cycle tilts the platform four times so that the rounded rocks roll north, then west, then south, then east. After each tilt, the rounded rocks roll as far as they can before the platform tilts in the next direction. After one cycle, the platform will have finished rolling the rounded rocks in those four directions in that order.
     let directions = [
         Direction::North,
         Direction::West,
@@ -249,23 +202,24 @@ fn part2(input: &str) {
 
     let mut n_iters = 0;
     let mut grid_states: HashMap<Grid, (usize, usize)> = HashMap::new();
-    let goal = 1_000_000_000;
+    let goal = 1_000_000_000 - 1;
     loop {
         for dir in directions.iter() {
             grid.slide(dir);
         }
 
         if grid_states.contains_key(&grid) {
-            let (prev_iter, prev_load) = grid_states.get(&grid).unwrap();
-            let cycle = n_iters - prev_iter;
-            let cycle_load = grid.north_load();
-            let cycle_load_diff = cycle_load - prev_load;
-            let remaining_iters = goal - n_iters;
-            let remaining_cycles = remaining_iters / cycle;
-            let remaining_load = remaining_cycles * cycle_load_diff;
-            let total_load = prev_load + remaining_load;
-            println!("Total load: {}", total_load);
-            break;
+            let (first_seen, _) = grid_states.get(&grid).unwrap();
+            let cycle_length = n_iters - first_seen;
+            for (iter, load) in grid_states.values() {
+                if *iter >= *first_seen && iter % cycle_length == goal % cycle_length {
+                    println!(
+                        "Part 2: iter {}, cycle length {}, load {}",
+                        iter, cycle_length, load
+                    );
+                    return;
+                }
+            }
         } else {
             grid_states.insert(grid.clone(), (n_iters, grid.north_load()));
             n_iters += 1;
