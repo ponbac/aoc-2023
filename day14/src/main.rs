@@ -135,7 +135,6 @@ impl Grid {
                                 self.set(x + 1, y, 'O');
                                 iter_movement += 1;
                             }
-                            _ => unreachable!(),
                         }
                     }
                 }
@@ -176,13 +175,17 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    let start = std::time::Instant::now();
     part1(input);
+    println!("Time: {:?}\n", start.elapsed());
+    let start = std::time::Instant::now();
     part2(input);
+    println!("Time: {:?}", start.elapsed());
 }
 
 fn part1(input: &str) {
     let mut grid = Grid::new(input);
-    println!("{}", grid);
+    // println!("{}", grid);
 
     // tilt all rocks north, until they hit a wall, another rock or a '#'
     grid.slide(&Direction::North);
@@ -211,8 +214,12 @@ fn part2(input: &str) {
         if grid_states.contains_key(&grid) {
             let (first_seen, _) = grid_states.get(&grid).unwrap();
             let cycle_length = n_iters - first_seen;
-            for (iter, load) in grid_states.values() {
-                if *iter >= *first_seen && iter % cycle_length == goal % cycle_length {
+
+            for (iter, load) in grid_states
+                .values()
+                .filter(|(iter, _)| *iter >= *first_seen)
+            {
+                if iter % cycle_length == goal % cycle_length {
                     println!(
                         "Part 2: iter {}, cycle length {}, load {}",
                         iter, cycle_length, load
