@@ -193,7 +193,6 @@ fn part1(input: &str) {
 
 fn part2(input: &str) {
     let mut grid = Grid::new(input);
-    // println!("{}", grid);
 
     let directions = [
         Direction::North,
@@ -202,7 +201,7 @@ fn part2(input: &str) {
         Direction::East,
     ];
 
-    let mut n_iters = 0;
+    let mut curr_iter = 0;
     let mut grid_states: HashMap<Grid, (usize, usize)> = HashMap::new();
     let goal = 1_000_000_000 - 1;
     loop {
@@ -211,12 +210,13 @@ fn part2(input: &str) {
         }
 
         if grid_states.contains_key(&grid) {
-            let (first_seen, _) = grid_states.get(&grid).unwrap();
-            let cycle_length = n_iters - first_seen;
+            let (iter_first_seen, _) = grid_states.get(&grid).unwrap();
+            let cycle_length = curr_iter - iter_first_seen;
 
             for (iter, load) in grid_states
                 .values()
-                .filter(|(iter, _)| *iter >= *first_seen)
+                // has to be inside the cycle
+                .filter(|(iter, _)| *iter >= *iter_first_seen)
             {
                 if iter % cycle_length == goal % cycle_length {
                     println!(
@@ -227,8 +227,8 @@ fn part2(input: &str) {
                 }
             }
         } else {
-            grid_states.insert(grid.clone(), (n_iters, grid.north_load()));
-            n_iters += 1;
+            grid_states.insert(grid.clone(), (curr_iter, grid.north_load()));
+            curr_iter += 1;
         }
     }
 }
