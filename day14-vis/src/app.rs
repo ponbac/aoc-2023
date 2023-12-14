@@ -90,16 +90,20 @@ impl eframe::App for MyApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let mut painter_size = ui.available_size_before_wrap();
             if !painter_size.is_finite() {
-                painter_size = egui::vec2(500.0, 500.0);
+                painter_size = egui::vec2(500.0, 1000.0);
             }
 
-            const SIDE: f32 = 5.0;
-
             let (res, painter) = ui.allocate_painter(painter_size, Sense::hover());
-            let center = res.rect.center().to_vec2();
 
+            let top_left = res.rect.min;
+
+            const SIDE: f32 = 8.0;
             let to_panel_pos = |pos: (usize, usize)| {
-                (egui::vec2(pos.0 as f32 * SIDE, pos.1 as f32 * SIDE) + center).to_pos2()
+                (egui::vec2(
+                    top_left.x + pos.0 as f32 * SIDE + 4.0,
+                    top_left.y + pos.1 as f32 * SIDE + 4.0,
+                ))
+                .to_pos2()
             };
 
             for x in 0..self.grid.width {
@@ -109,12 +113,12 @@ impl eframe::App for MyApp {
                     let color = match dot {
                         '#' => Color32::BLACK,
                         '.' => Color32::WHITE,
-                        'O' => Color32::RED,
+                        'O' => Color32::GOLD,
                         _ => continue,
                     };
 
                     let dot_pos = to_panel_pos((x, y));
-                    painter.circle_stroke(dot_pos, 1.0, Stroke::new(2.0, color));
+                    painter.circle_stroke(dot_pos, 2.0, Stroke::new(4.0, color));
                 }
             }
         });
