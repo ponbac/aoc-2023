@@ -73,25 +73,25 @@ fn part2(input: &str) {
 
     let mut boxes: HashMap<usize, Box> = HashMap::new();
     for action in actions {
-        let box_number = hash(match &action {
+        let box_id = hash(match &action {
             Action::Add(label, _) => label,
             Action::Remove(label) => label,
         }) % 256;
 
         match action {
             Action::Add(label, focal_length) => {
-                if let Some(box_) = boxes.get_mut(&box_number) {
+                if let Some(box_) = boxes.get_mut(&box_id) {
                     box_.lenses.insert(label, focal_length);
                 } else {
                     let new_box = Box {
-                        id: box_number,
+                        id: box_id,
                         lenses: IndexMap::from([(label, focal_length)]),
                     };
-                    boxes.insert(box_number, new_box);
+                    boxes.insert(box_id, new_box);
                 }
             }
             Action::Remove(label) => {
-                if let Some(box_) = boxes.get_mut(&box_number) {
+                if let Some(box_) = boxes.get_mut(&box_id) {
                     box_.lenses.shift_remove_entry(&label);
                 }
             }
