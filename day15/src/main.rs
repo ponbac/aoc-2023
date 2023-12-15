@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use indexmap::IndexMap;
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -12,18 +13,6 @@ use nom::{
 static EXAMPLE_INPUT: &str = r#"
 rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7
 "#;
-
-fn hash(i: &str) -> usize {
-    let mut hash = 0;
-    for c in i.chars() {
-        let ascii = c as u8;
-        hash += ascii as usize;
-        hash *= 17;
-        hash %= 256;
-    }
-
-    hash
-}
 
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 15 --");
@@ -49,7 +38,7 @@ fn part1(input: &str) {
 #[derive(Debug, Clone)]
 struct Box {
     id: usize,
-    lenses: Vec<(String, usize)>,
+    lenses: IndexMap<String, usize>,
 }
 
 enum Action {
@@ -92,31 +81,18 @@ fn part2(input: &str) {
         match action {
             Action::Add(label, focal_length) => {
                 if let Some(box_) = boxes.get_mut(&box_number) {
-                    if let Some(i) = box_.lenses.iter().position(|l| l.0 == label) {
-                        // replace lens
-                        box_.lenses[i] = (label, focal_length);
-                    } else {
-                        // add lens
-                        box_.lenses.push((label, focal_length));
-                    }
+                    box_.lenses.insert(label, focal_length);
                 } else {
                     let new_box = Box {
                         id: box_number,
-                        lenses: vec![(label, focal_length)],
+                        lenses: IndexMap::from([(label, focal_length)]),
                     };
                     boxes.insert(box_number, new_box);
                 }
             }
             Action::Remove(label) => {
                 if let Some(box_) = boxes.get_mut(&box_number) {
-                    let mut i = 0;
-                    while i < box_.lenses.len() {
-                        if box_.lenses[i].0 == label {
-                            box_.lenses.remove(i);
-                            break;
-                        }
-                        i += 1;
-                    }
+                    box_.lenses.shift_remove_entry(&label);
                 }
             }
         }
@@ -133,6 +109,12 @@ fn part2(input: &str) {
         .sum::<usize>();
 
     println!("Part 2: {}", sum);
+}
+
+fn hash(i: &str) -> usize {
+    i.chars()
+        .map(|c| c as usize)
+        .fold(0, |acc, ascii| (acc + ascii) * 17 % 256)
 }
 
 fn parse_number(i: &str) -> IResult<&str, usize> {
