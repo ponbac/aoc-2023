@@ -49,13 +49,7 @@ fn part1(input: &str) {
 #[derive(Debug, Clone)]
 struct Box {
     id: usize,
-    lenses: Vec<Lens>,
-}
-
-#[derive(Debug, Clone)]
-struct Lens {
-    label: String,
-    focal_length: usize,
+    lenses: Vec<(String, usize)>,
 }
 
 enum Action {
@@ -83,12 +77,13 @@ impl Action {
 }
 
 fn part2(input: &str) {
-    let strings: Vec<&str> = input.split(',').collect();
+    let actions = input
+        .split(',')
+        .map(|s| Action::parse(s).unwrap().1)
+        .collect::<Vec<_>>();
 
     let mut boxes: HashMap<usize, Box> = HashMap::new();
-
-    for string in strings {
-        let action = Action::parse(string).unwrap().1;
+    for action in actions {
         let box_number = hash(match &action {
             Action::Add(label, _) => label,
             Action::Remove(label) => label,
@@ -97,26 +92,17 @@ fn part2(input: &str) {
         match action {
             Action::Add(label, focal_length) => {
                 if let Some(box_) = boxes.get_mut(&box_number) {
-                    if let Some(i) = box_.lenses.iter().position(|l| l.label == label) {
+                    if let Some(i) = box_.lenses.iter().position(|l| l.0 == label) {
                         // replace lens
-                        box_.lenses[i] = Lens {
-                            label,
-                            focal_length,
-                        };
+                        box_.lenses[i] = (label, focal_length);
                     } else {
                         // add lens
-                        box_.lenses.push(Lens {
-                            label,
-                            focal_length,
-                        });
+                        box_.lenses.push((label, focal_length));
                     }
                 } else {
                     let new_box = Box {
                         id: box_number,
-                        lenses: vec![Lens {
-                            label,
-                            focal_length,
-                        }],
+                        lenses: vec![(label, focal_length)],
                     };
                     boxes.insert(box_number, new_box);
                 }
@@ -125,7 +111,7 @@ fn part2(input: &str) {
                 if let Some(box_) = boxes.get_mut(&box_number) {
                     let mut i = 0;
                     while i < box_.lenses.len() {
-                        if box_.lenses[i].label == label {
+                        if box_.lenses[i].0 == label {
                             box_.lenses.remove(i);
                             break;
                         }
@@ -142,7 +128,7 @@ fn part2(input: &str) {
             box_.lenses
                 .iter()
                 .enumerate()
-                .map(|(i, lens)| (box_.id + 1) * (i + 1) * lens.focal_length)
+                .map(|(i, lens)| (box_.id + 1) * (i + 1) * lens.1)
         })
         .sum::<usize>();
 
