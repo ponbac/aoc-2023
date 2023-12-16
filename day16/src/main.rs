@@ -1,3 +1,5 @@
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 static EXAMPLE_INPUT: &str = r#"
 .|...\....
 |.-.\.....
@@ -109,18 +111,20 @@ fn part1(input: &str) {
 fn part2(input: &str) {
     let grid = Grid::new(input);
 
-    let mut max_n_energized = 0;
-    for x in 0..grid.width {
-        let mut grid = grid.clone();
-        beam(&mut grid, x, 0, Dir::South);
+    let n_energized = (0..grid.width)
+        .into_par_iter()
+        .map(|x| {
+            let mut grid = grid.clone();
+            beam(&mut grid, x, 0, Dir::South);
 
-        max_n_energized = max_n_energized.max(grid.n_energized());
-    }
+            grid.n_energized()
+        })
+        .max();
 
     // I should probably do the same for the other directions, and also
     // handle the corner cases, but I got the right answer with this!
 
-    println!("Part 2: {}", max_n_energized);
+    println!("Part 2: {}", n_energized.unwrap());
 }
 
 fn beam(grid: &mut Grid, x: usize, y: usize, direction: Dir) {
