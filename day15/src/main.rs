@@ -83,11 +83,13 @@ fn part2(input: &str) {
                 if let Some(box_) = boxes.get_mut(&box_id) {
                     box_.lenses.insert(label, focal_length);
                 } else {
-                    let new_box = Box {
-                        id: box_id,
-                        lenses: IndexMap::from([(label, focal_length)]),
-                    };
-                    boxes.insert(box_id, new_box);
+                    boxes.insert(
+                        box_id,
+                        Box {
+                            id: box_id,
+                            lenses: IndexMap::from([(label, focal_length)]),
+                        },
+                    );
                 }
             }
             Action::Remove(label) => {
