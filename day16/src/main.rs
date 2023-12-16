@@ -11,7 +11,7 @@ static EXAMPLE_INPUT: &str = r#"
 ..//.|....
 "#;
 
-enum Direction {
+enum Dir {
     North,
     East,
     South,
@@ -91,14 +91,17 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    let start = std::time::Instant::now();
     part1(input.trim());
+    println!("Time: {:?}\n", start.elapsed());
+    let start = std::time::Instant::now();
     part2(input.trim());
+    println!("Time: {:?}", start.elapsed());
 }
 
 fn part1(input: &str) {
     let mut grid = Grid::new(input);
-
-    beam(&mut grid, 0, 0, Direction::East);
+    beam(&mut grid, 0, 0, Dir::East);
 
     println!("Part 1: {}", grid.n_energized());
 }
@@ -109,7 +112,7 @@ fn part2(input: &str) {
     let mut max_n_energized = 0;
     for x in 0..grid.width {
         let mut grid = grid.clone();
-        beam(&mut grid, x, 0, Direction::South);
+        beam(&mut grid, x, 0, Dir::South);
 
         max_n_energized = max_n_energized.max(grid.n_energized());
     }
@@ -120,7 +123,7 @@ fn part2(input: &str) {
     println!("Part 2: {}", max_n_energized);
 }
 
-fn beam(grid: &mut Grid, x: usize, y: usize, direction: Direction) {
+fn beam(grid: &mut Grid, x: usize, y: usize, direction: Dir) {
     let tile = match grid.get_mut(x, y) {
         Some(tile) => tile,
         None => return,
@@ -128,10 +131,10 @@ fn beam(grid: &mut Grid, x: usize, y: usize, direction: Direction) {
 
     if tile.energized
         && match direction {
-            Direction::North => tile.from_south,
-            Direction::East => tile.from_west,
-            Direction::South => tile.from_north,
-            Direction::West => tile.from_east,
+            Dir::North => tile.from_south,
+            Dir::East => tile.from_west,
+            Dir::South => tile.from_north,
+            Dir::West => tile.from_east,
         }
     {
         return;
@@ -139,89 +142,49 @@ fn beam(grid: &mut Grid, x: usize, y: usize, direction: Direction) {
 
     tile.energized = true;
     match direction {
-        Direction::North => tile.from_south = true,
-        Direction::East => tile.from_west = true,
-        Direction::South => tile.from_north = true,
-        Direction::West => tile.from_east = true,
+        Dir::North => tile.from_south = true,
+        Dir::East => tile.from_west = true,
+        Dir::South => tile.from_north = true,
+        Dir::West => tile.from_east = true,
     }
 
     match tile.data {
         '.' => match direction {
-            Direction::North => beam(
-                grid,
-                x,
-                if y == 0 { return } else { y - 1 },
-                Direction::North,
-            ),
-            Direction::East => beam(grid, x + 1, y, Direction::East),
-            Direction::South => beam(grid, x, y + 1, Direction::South),
-            Direction::West => beam(
-                grid,
-                if x == 0 { return } else { x - 1 },
-                y,
-                Direction::West,
-            ),
+            Dir::North => beam(grid, x, if y == 0 { return } else { y - 1 }, Dir::North),
+            Dir::East => beam(grid, x + 1, y, Dir::East),
+            Dir::South => beam(grid, x, y + 1, Dir::South),
+            Dir::West => beam(grid, if x == 0 { return } else { x - 1 }, y, Dir::West),
         },
         '/' => match direction {
-            Direction::North => beam(grid, x + 1, y, Direction::East),
-            Direction::East => beam(
-                grid,
-                x,
-                if y == 0 { return } else { y - 1 },
-                Direction::North,
-            ),
-            Direction::South => beam(
-                grid,
-                if x == 0 { return } else { x - 1 },
-                y,
-                Direction::West,
-            ),
-            Direction::West => beam(grid, x, y + 1, Direction::South),
+            Dir::North => beam(grid, x + 1, y, Dir::East),
+            Dir::East => beam(grid, x, if y == 0 { return } else { y - 1 }, Dir::North),
+            Dir::South => beam(grid, if x == 0 { return } else { x - 1 }, y, Dir::West),
+            Dir::West => beam(grid, x, y + 1, Dir::South),
         },
         '\\' => match direction {
-            Direction::North => beam(
-                grid,
-                if x == 0 { return } else { x - 1 },
-                y,
-                Direction::West,
-            ),
-            Direction::East => beam(grid, x, y + 1, Direction::South),
-            Direction::South => beam(grid, x + 1, y, Direction::East),
-            Direction::West => beam(
-                grid,
-                x,
-                if y == 0 { return } else { y - 1 },
-                Direction::North,
-            ),
+            Dir::North => beam(grid, if x == 0 { return } else { x - 1 }, y, Dir::West),
+            Dir::East => beam(grid, x, y + 1, Dir::South),
+            Dir::South => beam(grid, x + 1, y, Dir::East),
+            Dir::West => beam(grid, x, if y == 0 { return } else { y - 1 }, Dir::North),
         },
         '|' => match direction {
-            Direction::North => beam(
-                grid,
-                x,
-                if y == 0 { return } else { y - 1 },
-                Direction::North,
-            ),
-            Direction::South => beam(grid, x, y + 1, Direction::South),
-            Direction::East | Direction::West => {
+            Dir::North => beam(grid, x, if y == 0 { return } else { y - 1 }, Dir::North),
+            Dir::South => beam(grid, x, y + 1, Dir::South),
+            Dir::East | Dir::West => {
                 if y != 0 {
-                    beam(grid, x, y - 1, Direction::North);
+                    beam(grid, x, y - 1, Dir::North);
                 }
-                beam(grid, x, y + 1, Direction::South);
+                beam(grid, x, y + 1, Dir::South);
             }
         },
         '-' => match direction {
-            Direction::East => beam(grid, x + 1, y, Direction::East),
-            Direction::West => beam(
-                grid,
-                if x == 0 { return } else { x - 1 },
-                y,
-                Direction::West,
-            ),
-            Direction::North | Direction::South => {
+            Dir::East => beam(grid, x + 1, y, Dir::East),
+            Dir::West => beam(grid, if x == 0 { return } else { x - 1 }, y, Dir::West),
+            Dir::North | Dir::South => {
                 if x != 0 {
-                    beam(grid, x - 1, y, Direction::West);
+                    beam(grid, x - 1, y, Dir::West);
                 }
-                beam(grid, x + 1, y, Direction::East);
+                beam(grid, x + 1, y, Dir::East);
             }
         },
         _ => unreachable!(),
