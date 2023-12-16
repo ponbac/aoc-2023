@@ -20,7 +20,7 @@ enum Dir {
     West,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct Tile {
     data: char,
     energized: bool,
@@ -28,19 +28,6 @@ struct Tile {
     from_east: bool,
     from_south: bool,
     from_west: bool,
-}
-
-impl Default for Tile {
-    fn default() -> Self {
-        Self {
-            data: '.',
-            energized: false,
-            from_north: false,
-            from_east: false,
-            from_south: false,
-            from_west: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
