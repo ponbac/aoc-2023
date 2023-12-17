@@ -1,4 +1,7 @@
-use std::collections::{BinaryHeap, HashSet};
+use std::{
+    cmp,
+    collections::{BinaryHeap, HashSet},
+};
 
 static EXAMPLE_INPUT: &str = r#"
 2413432311323
@@ -34,12 +37,17 @@ impl Direction {
         }
     }
 
-    fn add(&self, pos: (usize, usize)) -> Option<(usize, usize)> {
+    fn checked_add(
+        &self,
+        pos: (usize, usize),
+        upper_limit: (usize, usize),
+    ) -> Option<(usize, usize)> {
         let (x, y) = pos;
         let (dx, dy) = self.delta();
         let x = x as isize + dx;
         let y = y as isize + dy;
-        if x < 0 || y < 0 {
+
+        if x < 0 || y < 0 || x >= upper_limit.0 as isize || y >= upper_limit.1 as isize {
             None
         } else {
             Some((x as usize, y as usize))
@@ -87,10 +95,8 @@ impl Grid {
         let mut neighbors = Vec::new();
 
         if steps < 3 {
-            if let Some(new_pos) = direction.add(position) {
-                if new_pos.0 < self.width && new_pos.1 < self.height {
-                    neighbors.push((new_pos, *direction, steps + 1));
-                }
+            if let Some(new_pos) = direction.checked_add(position, (self.width, self.height)) {
+                neighbors.push((new_pos, *direction, steps + 1));
             }
         }
 
@@ -100,10 +106,8 @@ impl Grid {
         };
 
         for dir in [left_direction, right_direction].iter() {
-            if let Some(new_pos) = dir.add(position) {
-                if new_pos.0 < self.width && new_pos.1 < self.height {
-                    neighbors.push((new_pos, *dir, 1));
-                }
+            if let Some(new_pos) = dir.checked_add(position, (self.width, self.height)) {
+                neighbors.push((new_pos, *dir, 1));
             }
         }
 
@@ -119,10 +123,8 @@ impl Grid {
         let mut neighbors = Vec::new();
 
         if steps < 10 {
-            if let Some(new_pos) = direction.add(position) {
-                if new_pos.0 < self.width && new_pos.1 < self.height {
-                    neighbors.push((new_pos, *direction, steps + 1));
-                }
+            if let Some(new_pos) = direction.checked_add(position, (self.width, self.height)) {
+                neighbors.push((new_pos, *direction, steps + 1));
             }
 
             if steps < 4 {
@@ -136,10 +138,8 @@ impl Grid {
         };
 
         for dir in [left_direction, right_direction].iter() {
-            if let Some(new_pos) = dir.add(position) {
-                if new_pos.0 < self.width && new_pos.1 < self.height {
-                    neighbors.push((new_pos, *dir, 1));
-                }
+            if let Some(new_pos) = dir.checked_add(position, (self.width, self.height)) {
+                neighbors.push((new_pos, *dir, 1));
             }
         }
 
@@ -156,13 +156,13 @@ struct State {
 }
 
 impl Ord for State {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
         other.heat_loss.cmp(&self.heat_loss)
     }
 }
 
 impl PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
