@@ -219,6 +219,7 @@ fn main() {
 }
 
 fn solve(input: &str) {
+    let start = std::time::Instant::now();
     let grid = Grid::new(input);
 
     let heat_loss = find_least_heat_loss_path(&grid, false);
@@ -226,4 +227,5 @@ fn solve(input: &str) {
 
     let heat_loss = find_least_heat_loss_path(&grid, true);
     println!("Part 2: {}", heat_loss);
+    println!("Time: {:?}", start.elapsed());
 }
