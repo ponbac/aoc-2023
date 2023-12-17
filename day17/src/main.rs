@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, VecDeque};
+use std::collections::{BinaryHeap, HashSet};
 
 static EXAMPLE_INPUT: &str = r#"
 2413432311323
@@ -78,7 +78,7 @@ impl Grid {
         self.data[y][x]
     }
 
-    fn get_valid_neighbors(
+    fn get_p1_neighbors(
         &self,
         position: (usize, usize),
         direction: &Direction,
@@ -86,7 +86,6 @@ impl Grid {
     ) -> Vec<((usize, usize), Direction, usize)> {
         let mut neighbors = Vec::new();
 
-        // Continue in the same direction if steps are less than 3
         if steps < 3 {
             if let Some(new_pos) = direction.add(position) {
                 if new_pos.0 < self.width && new_pos.1 < self.height {
@@ -95,19 +94,9 @@ impl Grid {
             }
         }
 
-        // Turn left and right
-        let left_direction = match direction {
-            Direction::Up => Direction::Left,
-            Direction::Down => Direction::Right,
-            Direction::Left => Direction::Down,
-            Direction::Right => Direction::Up,
-        };
-
-        let right_direction = match direction {
-            Direction::Up => Direction::Right,
-            Direction::Down => Direction::Left,
-            Direction::Left => Direction::Up,
-            Direction::Right => Direction::Down,
+        let (left_direction, right_direction) = match direction {
+            Direction::Up | Direction::Down => (Direction::Left, Direction::Right),
+            Direction::Left | Direction::Right => (Direction::Down, Direction::Up),
         };
 
         for dir in [left_direction, right_direction].iter() {
@@ -121,26 +110,40 @@ impl Grid {
         neighbors
     }
 
-    fn print(&self) {
-        for row in &self.data {
-            for value in row {
-                print!("{}", value);
-            }
-            println!();
-        }
-    }
+    fn get_p2_neighbors(
+        &self,
+        position: (usize, usize),
+        direction: &Direction,
+        steps: usize,
+    ) -> Vec<((usize, usize), Direction, usize)> {
+        let mut neighbors = Vec::new();
 
-    fn print_with_path(&self, path: &[(usize, usize)]) {
-        for (y, row) in self.data.iter().enumerate() {
-            for (x, value) in row.iter().enumerate() {
-                if path.contains(&(x, y)) {
-                    print!("✖️ ");
-                } else {
-                    print!("{} ", value);
+        if steps < 10 {
+            if let Some(new_pos) = direction.add(position) {
+                if new_pos.0 < self.width && new_pos.1 < self.height {
+                    neighbors.push((new_pos, *direction, steps + 1));
                 }
             }
-            println!();
+
+            if steps < 4 {
+                return neighbors;
+            }
         }
+
+        let (left_direction, right_direction) = match direction {
+            Direction::Up | Direction::Down => (Direction::Left, Direction::Right),
+            Direction::Left | Direction::Right => (Direction::Down, Direction::Up),
+        };
+
+        for dir in [left_direction, right_direction].iter() {
+            if let Some(new_pos) = dir.add(position) {
+                if new_pos.0 < self.width && new_pos.1 < self.height {
+                    neighbors.push((new_pos, *dir, 1));
+                }
+            }
+        }
+
+        neighbors
     }
 }
 
@@ -150,17 +153,11 @@ struct State {
     position: (usize, usize),
     direction: Direction,
     steps: usize,
-    distance_to_end: usize,
-    path: Vec<(usize, usize)>,
 }
 
-// Implement Ord and PartialOrd to use State in a BinaryHeap
 impl Ord for State {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        other
-            .heat_loss
-            .cmp(&self.heat_loss)
-            .then_with(|| self.distance_to_end.cmp(&other.distance_to_end))
+        other.heat_loss.cmp(&self.heat_loss)
     }
 }
 
@@ -170,81 +167,63 @@ impl PartialOrd for State {
     }
 }
 
-fn find_least_heat_loss_path(grid: &Grid) -> usize {
-    let mut pq = BinaryHeap::new();
-    let mut visited = std::collections::HashSet::new();
+fn find_least_heat_loss_path(grid: &Grid, part_2: bool) -> usize {
+    let mut heap = BinaryHeap::new();
+    let mut visited = HashSet::new();
+    let end_pos = (grid.width - 1, grid.height - 1);
 
-    let start_state = State {
+    heap.push(State {
         heat_loss: 0,
         position: (0, 0),
         direction: Direction::Right,
         steps: 0,
-        distance_to_end: grid.width + grid.height - 2,
-        path: Vec::new(),
-    };
+    });
 
-    pq.push(start_state);
-
-    while let Some(State {
-        heat_loss,
-        position,
-        direction,
-        steps,
-        distance_to_end: _,
-        path,
-    }) = pq.pop()
-    {
-        if position == (grid.width - 1, grid.height - 1) {
-            grid.print_with_path(&path);
-            return heat_loss;
+    while let Some(state) = heap.pop() {
+        if state.position == end_pos {
+            return state.heat_loss;
         }
 
-        let visit_key = (position.0, position.1, direction);
-        if visited.contains(&visit_key) {
+        if !visited.insert((state.position, state.direction, state.steps)) {
             continue;
         }
-        visited.insert(visit_key);
 
-        for (next_position, next_direction, next_steps) in
-            grid.get_valid_neighbors(position, &direction, steps)
-        {
-            let next_heat_loss = heat_loss + grid.get(next_position);
-            let next_distance_to_end = grid.width + grid.height - next_position.0 - next_position.1;
-            let mut next_path = path.clone();
-            next_path.push(next_position);
-            let next_state = State {
-                heat_loss: next_heat_loss,
-                position: next_position,
-                direction: next_direction,
-                steps: next_steps,
-                distance_to_end: next_distance_to_end,
-                path: next_path,
-            };
-            pq.push(next_state);
+        let neighbors = if part_2 {
+            grid.get_p2_neighbors(state.position, &state.direction, state.steps)
+        } else {
+            grid.get_p1_neighbors(state.position, &state.direction, state.steps)
+        };
+
+        for (new_pos, new_dir, new_steps) in neighbors {
+            let new_heat_loss = state.heat_loss + grid.get(new_pos);
+
+            heap.push(State {
+                heat_loss: new_heat_loss,
+                position: new_pos,
+                direction: new_dir,
+                steps: new_steps,
+            });
         }
     }
 
-    usize::MAX // Return maximum value if no path found
+    unreachable!("there should always be a path to the end!")
 }
 
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 17 --");
 
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
 
-    part1(input.trim());
-    // part2(input.trim());
+    solve(input.trim());
 }
 
-fn part1(input: &str) {
+fn solve(input: &str) {
     let grid = Grid::new(input);
-    // grid.print();
 
-    let heat_loss = find_least_heat_loss_path(&grid);
+    let heat_loss = find_least_heat_loss_path(&grid, false);
     println!("Part 1: {}", heat_loss);
-}
 
-fn part2(input: &str) {
-    todo!()
+    let heat_loss = find_least_heat_loss_path(&grid, true);
+    println!("Part 2: {}", heat_loss);
 }
