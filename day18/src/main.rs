@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 static EXAMPLE_INPUT: &str = r#"
 R 6 (#70c710)
 D 5 (#0dc571)
@@ -31,117 +29,79 @@ fn solve(input: &str) {
         .lines()
         .map(|line| {
             let (part, _) = line.split_once(" (").unwrap();
-            let (direction, distance) = part.split_once(' ').unwrap();
+            let (dir, distance) = part.split_once(' ').unwrap();
 
+            let dir = dir.chars().next().unwrap();
             let distance = distance.parse::<usize>().unwrap();
 
-            (direction, distance)
+            (dir, distance)
         })
         .collect::<Vec<_>>();
 
-    let mut grid: HashMap<(isize, isize), char> = HashMap::new();
+    let area = calc_area(&instructions);
+    println!("Part 1: {}", area);
 
-    let mut x = 0;
-    let mut y = 0;
+    let instructions = input
+        .lines()
+        .map(|line| {
+            let (_, color) = line.split_once(" (#").unwrap();
+            let dir = match color.as_bytes()[color.len() - 2] {
+                b'0' => 'R',
+                b'1' => 'D',
+                b'2' => 'L',
+                b'3' => 'U',
+                _ => unreachable!(),
+            };
+            let distance = usize::from_str_radix(&color[0..color.len() - 2], 16).unwrap();
+
+            (dir, distance)
+        })
+        .collect::<Vec<_>>();
+
+    let area = calc_area(&instructions);
+    println!("Part 2: {}", area);
+}
+
+fn calc_area(instructions: &[(char, usize)]) -> usize {
+    let mut curr_pos: (isize, isize) = (0, 0);
+    let mut visited = Vec::new();
+    let mut boundary = 0;
 
     for (direction, distance) in instructions {
+        visited.push(curr_pos);
+        boundary += *distance;
+
         match direction {
-            "U" => {
-                for _ in 0..distance {
-                    y += 1;
-                    grid.insert((x, y), '#');
-                }
-            }
-            "D" => {
-                for _ in 0..distance {
-                    y -= 1;
-                    grid.insert((x, y), '#');
-                }
-            }
-            "L" => {
-                for _ in 0..distance {
-                    x -= 1;
-                    grid.insert((x, y), '#');
-                }
-            }
-            "R" => {
-                for _ in 0..distance {
-                    x += 1;
-                    grid.insert((x, y), '#');
-                }
-            }
-            _ => panic!("Unknown direction: {}", direction),
+            'R' => curr_pos.0 += *distance as isize,
+            'L' => curr_pos.0 -= *distance as isize,
+            'U' => curr_pos.1 += *distance as isize,
+            'D' => curr_pos.1 -= *distance as isize,
+            _ => unreachable!(),
         }
     }
 
-    let min_x = *grid.keys().map(|(x, _)| x).min().unwrap();
-    let max_x = *grid.keys().map(|(x, _)| x).max().unwrap();
-    let min_y = *grid.keys().map(|(_, y)| y).min().unwrap();
-    let max_y = *grid.keys().map(|(_, y)| y).max().unwrap();
+    // Pick's theorem `Area = inside + boundary / 2 - 1` can be rearranged to `inside = Area - boundary / 2 + 1`
+    let area = shoelace(&visited);
+    let inside = area - boundary / 2 + 1;
 
-    (min_y..=max_y).rev().for_each(|y| {
-        (min_x..=max_x).for_each(|x| {
-            let c = grid.get(&(x, y)).unwrap_or(&'.');
-            print!("{}", c);
-        });
-        println!();
-    });
+    inside + boundary
+}
 
-    println!();
+/// Shoelace formula for calculating the area of a polygon.
+///
+/// https://www.youtube.com/watch?v=FSWPX0XB7a0
+fn shoelace(points: &[(isize, isize)]) -> usize {
+    let mut area = 0;
+    for i in 0..points.len() {
+        let (x1, y1) = points[i];
+        let (x2, y2) = points[(i + 1) % points.len()];
 
-    // turn into char grid
-    let mut grid: Vec<Vec<char>> = (min_y..=max_y)
-        .rev()
-        .map(|y| {
-            (min_x..=max_x)
-                .map(|x| *grid.get(&(x, y)).unwrap_or(&'.'))
-                .collect()
-        })
-        .collect();
-
-    let inside_point: (usize, usize) = grid
-        .iter()
-        .skip(1)
-        .enumerate()
-        .find_map(|(y, row)| {
-            let mut inside = false;
-
-            for (x, c) in row.iter().enumerate() {
-                if inside && *c == '.' {
-                    return Some((x, y + 1));
-                }
-
-                inside = *c == '#';
-            }
-
-            None
-        })
-        .unwrap();
-
-    // flood fill
-    let mut stack = vec![inside_point];
-    while let Some((x, y)) = stack.pop() {
-        if grid[y][x] == '.' {
-            grid[y][x] = '#';
-            stack.push((x + 1, y));
-            if x > 0 {
-                stack.push((x - 1, y));
-            }
-            stack.push((x, y + 1));
-            if y > 0 {
-                stack.push((x, y - 1));
-            }
-        }
+        area += (x1 * y2) - (y1 * x2);
     }
 
-    (0..grid.len()).for_each(|y| {
-        (0..grid[y].len()).for_each(|x| {
-            print!("{}", grid[y][x]);
-        });
-        println!();
-    });
+    if area < 0 {
+        area *= -1;
+    }
 
-    let n_filled = grid.iter().flatten().filter(|c| **c == '#').count();
-
-    println!("\nNumber of filled squares: {}", n_filled);
+    area as usize / 2
 }
