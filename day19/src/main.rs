@@ -64,26 +64,22 @@ fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -
                     continue;
                 }
 
-                if target == "A" {
-                    return true;
-                } else if target == "R" {
-                    return false;
+                match target.as_str() {
+                    "A" => return true,
+                    "R" => return false,
+                    _ => return process(part, target, workflows),
                 }
-
-                return process(part, target, workflows);
             }
             Rule::LessThan(value_id, value, target) => {
                 if part.get(value_id) >= *value {
                     continue;
                 }
 
-                if target == "A" {
-                    return true;
-                } else if target == "R" {
-                    return false;
+                match target.as_str() {
+                    "A" => return true,
+                    "R" => return false,
+                    _ => return process(part, target, workflows),
                 }
-
-                return process(part, target, workflows);
             }
             Rule::Accept => return true,
             Rule::Reject => return false,
