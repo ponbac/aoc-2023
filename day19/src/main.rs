@@ -137,8 +137,13 @@ fn n_processable(
 }
 
 fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -> bool {
-    let workflow = workflows.get(workflow).unwrap();
+    if workflow == "A" {
+        return true;
+    } else if workflow == "R" {
+        return false;
+    }
 
+    let workflow = workflows.get(workflow).unwrap();
     for rule in &workflow.rules {
         match rule {
             Rule::GreaterThan(value_id, value, target) => {
@@ -146,22 +151,14 @@ fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -
                     continue;
                 }
 
-                match target.as_str() {
-                    "A" => return true,
-                    "R" => return false,
-                    _ => return process(part, target, workflows),
-                }
+                return process(part, target, workflows);
             }
             Rule::LessThan(value_id, value, target) => {
                 if part.get(value_id) >= *value {
                     continue;
                 }
 
-                match target.as_str() {
-                    "A" => return true,
-                    "R" => return false,
-                    _ => return process(part, target, workflows),
-                }
+                return process(part, target, workflows);
             }
             Rule::Accept => return true,
             Rule::Reject => return false,
