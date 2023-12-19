@@ -92,19 +92,19 @@ fn n_processable(
             } else if min > *value {
                 n_processable(ranges, target, 0, workflows)
             } else {
-                let fail_range = {
+                let fail_ranges = {
                     let mut r = ranges;
                     r[range_index(value_id)] = (min, *value);
                     r
                 };
-                let pass_range = {
+                let pass_ranges = {
                     let mut r = ranges;
                     r[range_index(value_id)] = (*value + 1, max);
                     r
                 };
 
-                n_processable(fail_range, workflow_key, rule_index + 1, workflows)
-                    + n_processable(pass_range, target, 0, workflows)
+                n_processable(fail_ranges, workflow_key, rule_index + 1, workflows)
+                    + n_processable(pass_ranges, target, 0, workflows)
             }
         }
         Rule::LessThan(value_id, value, target) => {
@@ -115,19 +115,19 @@ fn n_processable(
             } else if max < *value {
                 n_processable(ranges, target, 0, workflows)
             } else {
-                let fail_range = {
+                let fail_ranges = {
                     let mut r = ranges;
                     r[range_index(value_id)] = (*value, max);
                     r
                 };
-                let pass_range = {
+                let pass_ranges = {
                     let mut r = ranges;
                     r[range_index(value_id)] = (min, *value - 1);
                     r
                 };
 
-                n_processable(fail_range, workflow_key, rule_index + 1, workflows)
-                    + n_processable(pass_range, target, 0, workflows)
+                n_processable(fail_ranges, workflow_key, rule_index + 1, workflows)
+                    + n_processable(pass_ranges, target, 0, workflows)
             }
         }
         Rule::Accept => sum_ranges(&ranges),
