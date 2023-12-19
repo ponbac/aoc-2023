@@ -61,7 +61,7 @@ fn n_processable(
     rule_index: usize,
     workflows: &HashMap<String, Workflow>,
 ) -> usize {
-    let value_id_to_index = |value_id: &String| match value_id.as_str() {
+    let range_index = |value_id: &String| match value_id.as_str() {
         "x" => 0,
         "m" => 1,
         "a" => 2,
@@ -85,7 +85,7 @@ fn n_processable(
     let workflow = workflows.get(workflow_key).unwrap();
     match workflow.rules.get(rule_index).unwrap() {
         Rule::GreaterThan(value_id, value, target) => {
-            let (min, max) = ranges[value_id_to_index(value_id)];
+            let (min, max) = ranges[range_index(value_id)];
 
             if max <= *value {
                 n_processable(ranges, workflow_key, rule_index + 1, workflows)
@@ -94,12 +94,12 @@ fn n_processable(
             } else {
                 let fail_range = {
                     let mut r = ranges;
-                    r[value_id_to_index(value_id)] = (min, *value);
+                    r[range_index(value_id)] = (min, *value);
                     r
                 };
                 let pass_range = {
                     let mut r = ranges;
-                    r[value_id_to_index(value_id)] = (*value + 1, max);
+                    r[range_index(value_id)] = (*value + 1, max);
                     r
                 };
 
@@ -108,7 +108,7 @@ fn n_processable(
             }
         }
         Rule::LessThan(value_id, value, target) => {
-            let (min, max) = ranges[value_id_to_index(value_id)];
+            let (min, max) = ranges[range_index(value_id)];
 
             if min >= *value {
                 n_processable(ranges, workflow_key, rule_index + 1, workflows)
@@ -117,12 +117,12 @@ fn n_processable(
             } else {
                 let fail_range = {
                     let mut r = ranges;
-                    r[value_id_to_index(value_id)] = (*value, max);
+                    r[range_index(value_id)] = (*value, max);
                     r
                 };
                 let pass_range = {
                     let mut r = ranges;
-                    r[value_id_to_index(value_id)] = (min, *value - 1);
+                    r[range_index(value_id)] = (min, *value - 1);
                     r
                 };
 
