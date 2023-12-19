@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use parse::{Part, Workflow};
-
-use crate::parse::Rule;
+use parse::{Part, Rule, Workflow};
 
 mod parse;
 
@@ -27,8 +25,8 @@ hdj{m>838:A,pv}
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 19 --");
 
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
 
     solve(input.trim());
 }
@@ -52,6 +50,90 @@ fn solve(input: &str) {
         .map(|part| part.sum())
         .sum::<usize>();
     println!("Part 1: {}", sum);
+
+    let processable_parts = n_processable([(1, 4000); 4], "in", 0, &workflows);
+    println!("Part 2: {}", processable_parts);
+}
+
+fn n_processable(
+    ranges: [(usize, usize); 4],
+    workflow_key: &str,
+    rule_index: usize,
+    workflows: &HashMap<String, Workflow>,
+) -> usize {
+    let value_id_to_index = |value_id: &String| match value_id.as_str() {
+        "x" => 0,
+        "m" => 1,
+        "a" => 2,
+        "s" => 3,
+        _ => unreachable!(),
+    };
+
+    let sum_ranges = |ranges: &[(usize, usize)]| {
+        ranges
+            .iter()
+            .map(|(min, max)| max - min + 1)
+            .product::<usize>()
+    };
+
+    if workflow_key == "A" {
+        return sum_ranges(&ranges);
+    } else if workflow_key == "R" {
+        return 0;
+    }
+
+    let workflow = workflows.get(workflow_key).unwrap();
+    match workflow.rules.get(rule_index).unwrap() {
+        Rule::GreaterThan(value_id, value, target) => {
+            let (min, max) = ranges[value_id_to_index(value_id)];
+
+            if max <= *value {
+                n_processable(ranges, workflow_key, rule_index + 1, workflows)
+            } else if min > *value {
+                n_processable(ranges, target, 0, workflows)
+            } else {
+                let fail_range = {
+                    let mut r = ranges;
+                    r[value_id_to_index(value_id)] = (min, *value);
+                    r
+                };
+                let pass_range = {
+                    let mut r = ranges;
+                    r[value_id_to_index(value_id)] = (*value + 1, max);
+                    r
+                };
+
+                n_processable(fail_range, workflow_key, rule_index + 1, workflows)
+                    + n_processable(pass_range, target, 0, workflows)
+            }
+        }
+        Rule::LessThan(value_id, value, target) => {
+            let (min, max) = ranges[value_id_to_index(value_id)];
+
+            if min >= *value {
+                n_processable(ranges, workflow_key, rule_index + 1, workflows)
+            } else if max < *value {
+                n_processable(ranges, target, 0, workflows)
+            } else {
+                let fail_range = {
+                    let mut r = ranges;
+                    r[value_id_to_index(value_id)] = (*value, max);
+                    r
+                };
+                let pass_range = {
+                    let mut r = ranges;
+                    r[value_id_to_index(value_id)] = (min, *value - 1);
+                    r
+                };
+
+                n_processable(fail_range, workflow_key, rule_index + 1, workflows)
+                    + n_processable(pass_range, target, 0, workflows)
+            }
+        }
+        Rule::Accept => sum_ranges(&ranges),
+        Rule::Reject => 0,
+        Rule::Forward(target) => n_processable(ranges, target, 0, workflows),
+    }
 }
 
 fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -> bool {
