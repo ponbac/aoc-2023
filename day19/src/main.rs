@@ -65,16 +65,12 @@ fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -
     let workflow = workflows.get(workflow).unwrap();
     for rule in &workflow.rules {
         match rule {
-            Rule::GreaterThan(value_id, value, target) => {
-                if part.get(value_id) <= *value {
-                    continue;
-                }
-
-                return process(part, target, workflows);
-            }
-            Rule::LessThan(value_id, value, target) => {
-                if part.get(value_id) >= *value {
-                    continue;
+            Rule::GreaterThan(value_id, cmp_v, target)
+            | Rule::LessThan(value_id, cmp_v, target) => {
+                match (rule, part.get(value_id)) {
+                    (Rule::GreaterThan(_, _, _), part_v) if part_v <= *cmp_v => continue,
+                    (Rule::LessThan(_, _, _), part_v) if part_v >= *cmp_v => continue,
+                    _ => {}
                 }
 
                 return process(part, target, workflows);
@@ -117,22 +113,22 @@ fn n_processable(
 
     let workflow = workflows.get(workflow_key).unwrap();
     match workflow.rules.get(rule_index).unwrap() {
-        Rule::GreaterThan(value_id, value, target) => {
+        Rule::GreaterThan(value_id, cmp_v, target) => {
             let (min, max) = ranges[range_index(value_id)];
 
-            if max <= *value {
+            if max <= *cmp_v {
                 n_processable(ranges, workflow_key, rule_index + 1, workflows)
-            } else if min > *value {
+            } else if min > *cmp_v {
                 n_processable(ranges, target, 0, workflows)
             } else {
                 let fail_ranges = {
                     let mut r = ranges;
-                    r[range_index(value_id)] = (min, *value);
+                    r[range_index(value_id)] = (min, *cmp_v);
                     r
                 };
                 let pass_ranges = {
                     let mut r = ranges;
-                    r[range_index(value_id)] = (*value + 1, max);
+                    r[range_index(value_id)] = (*cmp_v + 1, max);
                     r
                 };
 
@@ -140,22 +136,22 @@ fn n_processable(
                     + n_processable(pass_ranges, target, 0, workflows)
             }
         }
-        Rule::LessThan(value_id, value, target) => {
+        Rule::LessThan(value_id, cmp_v, target) => {
             let (min, max) = ranges[range_index(value_id)];
 
-            if min >= *value {
+            if min >= *cmp_v {
                 n_processable(ranges, workflow_key, rule_index + 1, workflows)
-            } else if max < *value {
+            } else if max < *cmp_v {
                 n_processable(ranges, target, 0, workflows)
             } else {
                 let fail_ranges = {
                     let mut r = ranges;
-                    r[range_index(value_id)] = (*value, max);
+                    r[range_index(value_id)] = (*cmp_v, max);
                     r
                 };
                 let pass_ranges = {
                     let mut r = ranges;
-                    r[range_index(value_id)] = (min, *value - 1);
+                    r[range_index(value_id)] = (min, *cmp_v - 1);
                     r
                 };
 
