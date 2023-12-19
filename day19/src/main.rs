@@ -55,6 +55,39 @@ fn solve(input: &str) {
     println!("Part 2: {}", processable_parts);
 }
 
+fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -> bool {
+    if workflow == "A" {
+        return true;
+    } else if workflow == "R" {
+        return false;
+    }
+
+    let workflow = workflows.get(workflow).unwrap();
+    for rule in &workflow.rules {
+        match rule {
+            Rule::GreaterThan(value_id, value, target) => {
+                if part.get(value_id) <= *value {
+                    continue;
+                }
+
+                return process(part, target, workflows);
+            }
+            Rule::LessThan(value_id, value, target) => {
+                if part.get(value_id) >= *value {
+                    continue;
+                }
+
+                return process(part, target, workflows);
+            }
+            Rule::Accept => return true,
+            Rule::Reject => return false,
+            Rule::Forward(target) => return process(part, target, workflows),
+        }
+    }
+
+    unreachable!()
+}
+
 fn n_processable(
     ranges: [(usize, usize); 4],
     workflow_key: &str,
@@ -134,37 +167,4 @@ fn n_processable(
         Rule::Reject => 0,
         Rule::Forward(target) => n_processable(ranges, target, 0, workflows),
     }
-}
-
-fn process(part: &Part, workflow: &str, workflows: &HashMap<String, Workflow>) -> bool {
-    if workflow == "A" {
-        return true;
-    } else if workflow == "R" {
-        return false;
-    }
-
-    let workflow = workflows.get(workflow).unwrap();
-    for rule in &workflow.rules {
-        match rule {
-            Rule::GreaterThan(value_id, value, target) => {
-                if part.get(value_id) <= *value {
-                    continue;
-                }
-
-                return process(part, target, workflows);
-            }
-            Rule::LessThan(value_id, value, target) => {
-                if part.get(value_id) >= *value {
-                    continue;
-                }
-
-                return process(part, target, workflows);
-            }
-            Rule::Accept => return true,
-            Rule::Reject => return false,
-            Rule::Forward(target) => return process(part, target, workflows),
-        }
-    }
-
-    unreachable!()
 }
