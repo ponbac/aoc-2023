@@ -152,19 +152,28 @@ fn solve(input: &str) {
 
     // for _ in 0..1000 {
     broadcast(broadcaster, &mut pulse_queue);
-    while let Some((id, on)) = pulse_queue.pop_front() {
+    while let Some((id, high)) = pulse_queue.pop_front() {
         // println!("Pulse: {} {}", id, on);
         let module = modules.get_mut(&id).unwrap();
 
         match module {
-            Module::FlipFlop { on: o, .. } => {
-                *o = on;
-                flip_flop(module, &mut pulse_queue);
+            Module::FlipFlop {
+                mut on,
+                destinations,
+                ..
+            } => {
+                if !high {
+                    on = !on;
+                    destinations.iter().for_each(|id| {
+                        pulse_queue.push_back((id.to_string(), on));
+                    });
+                }
             }
             Module::Conjunction { inputs, .. } => {
+                // TODO: need to check from?
                 let all_on = inputs.iter().all(|(_, on)| *on);
                 if all_on {
-                    flip_flop(module, &mut pulse_queue);
+                    pulse_queue.push_back((id.to_string(), true));
                 }
             }
             Module::Broadcaster { .. } => {
