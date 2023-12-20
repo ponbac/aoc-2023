@@ -147,14 +147,14 @@ fn solve(input: &str) {
 
     // println!("Modules: {:#?}", modules);
 
-    let mut pulse_queue: VecDeque<(String, bool)> = VecDeque::new();
+    let mut pulse_queue: VecDeque<(String, String, bool)> = VecDeque::new();
     let broadcaster = modules.get("broadcaster").unwrap();
 
     // for _ in 0..1000 {
     broadcast(broadcaster, &mut pulse_queue);
-    while let Some((id, high)) = pulse_queue.pop_front() {
+    while let Some((from, curr, high)) = pulse_queue.pop_front() {
         // println!("Pulse: {} {}", id, on);
-        let module = modules.get_mut(&id).unwrap();
+        let module = modules.get_mut(&curr).unwrap();
 
         match module {
             Module::FlipFlop {
@@ -164,16 +164,28 @@ fn solve(input: &str) {
             } => {
                 if !high {
                     on = !on;
-                    destinations.iter().for_each(|id| {
-                        pulse_queue.push_back((id.to_string(), on));
+                    destinations.iter().for_each(|to| {
+                        pulse_queue.push_back((curr, to.to_string(), on));
                     });
                 }
             }
-            Module::Conjunction { inputs, .. } => {
-                // TODO: need to check from?
+            Module::Conjunction {
+                inputs,
+                destinations,
+                ..
+            } => {
+                // mutate input for from
+                let input = inputs.iter_mut().find(|(id, _)| *id == from).unwrap();
+                input.1 = high;
                 let all_on = inputs.iter().all(|(_, on)| *on);
                 if all_on {
-                    pulse_queue.push_back((id.to_string(), true));
+                    destinations.iter().for_each(|to| {
+                        pulse_queue.push_back((curr, to.to_string(), false));
+                    });
+                } else {
+                    destinations.iter().for_each(|to| {
+                        pulse_queue.push_back((curr, to.to_string(), true));
+                    });
                 }
             }
             Module::Broadcaster { .. } => {
@@ -186,13 +198,16 @@ fn solve(input: &str) {
     println!("Modules: {:#?}", modules);
 }
 
-fn broadcast(broadcast_module: &Module, pulse_queue: &mut VecDeque<(String, bool)>) {
-    let Module::Broadcaster { destinations, .. } = broadcast_module else {
+fn broadcast(broadcast_module: &Module, pulse_queue: &mut VecDeque<(String, String, bool)>) {
+    let Module::Broadcaster {
+        id, destinations, ..
+    } = broadcast_module
+    else {
         panic!("Expected Broadcaster module");
     };
 
     for destination in destinations {
-        pulse_queue.push_back((destination.to_string(), false));
+        pulse_queue.push_back((id.to_string(), destination.to_string(), false));
     }
 }
 
