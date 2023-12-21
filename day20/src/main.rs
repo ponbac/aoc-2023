@@ -11,18 +11,18 @@ use nom::{
 };
 
 static EXAMPLE_INPUT: &str = r#"
-broadcaster -> a
-%a -> inv, con
-&inv -> b
-%b -> con
-&con -> output
+broadcaster -> a, b, c
+%a -> b
+%b -> c
+%c -> inv
+&inv -> a
 "#;
 
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 20 --");
 
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
 
     solve(input.trim());
 }
@@ -61,6 +61,9 @@ impl Module {
                 for (id, last_high) in inputs {
                     if id == from {
                         *last_high = high;
+                        if !high {
+                            all_high = false;
+                        }
                     } else if !*last_high {
                         all_high = false;
                     }
@@ -88,7 +91,7 @@ fn parse_flip_flop(i: &str) -> IResult<&str, Module> {
         separated_pair(
             preceded(tag("%"), parse_id),
             tag(" -> "),
-            separated_list1(tag(","), parse_id),
+            separated_list1(tag(", "), parse_id),
         ),
         |(id, destinations)| Module::FlipFlop {
             id: id.to_string(),
@@ -103,7 +106,7 @@ fn parse_conjunction(i: &str) -> IResult<&str, Module> {
         separated_pair(
             preceded(tag("&"), parse_id),
             tag(" -> "),
-            separated_list1(tag(","), parse_id),
+            separated_list1(tag(", "), parse_id),
         ),
         |(id, destinations)| Module::Conjunction {
             id: id.to_string(),
@@ -118,7 +121,7 @@ fn parse_broadcaster(i: &str) -> IResult<&str, Module> {
         separated_pair(
             tag("broadcaster"),
             tag(" -> "),
-            separated_list1(tag(","), parse_id),
+            separated_list1(tag(", "), parse_id),
         ),
         |(_, destinations)| Module::Broadcaster {
             id: "broadcaster".to_string(),
@@ -140,6 +143,7 @@ fn solve(input: &str) {
             (id.to_string(), module)
         })
         .collect();
+    // println!("Modules, pre: {:#?}", modules);
 
     // fill conjunction inputs
     let mut input_map: HashMap<String, Vec<String>> = HashMap::new();
@@ -186,16 +190,11 @@ fn solve(input: &str) {
 
     for _ in 0..1000 {
         let mut pulse_queue: VecDeque<(String, String, bool)> = VecDeque::new();
-        pulse_queue.push_back(("broadcaster".to_string(), "a".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "b".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "c".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "nt".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "kx".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "rc".to_string(), false));
-        // pulse_queue.push_back(("broadcaster".to_string(), "mg".to_string(), false));
+        pulse_queue.push_back(("btn".to_string(), "broadcaster".to_string(), false));
         n_low += 1;
 
         while let Some((from, to, high)) = pulse_queue.pop_front() {
+            // println!("{} -> {} ({})", from, to, high);
             if let Some(module) = modules.get_mut(to.as_str()) {
                 if let Some(high) = module.process(from.as_str(), high) {
                     match module {
