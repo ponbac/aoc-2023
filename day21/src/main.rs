@@ -108,9 +108,7 @@ fn main() {
 
 fn solve(input: &str) {
     let grid = Grid::new(input);
-    // grid.print();
 
-    // bfs all possible positions that can be reached from the start position after exactly 6 steps, can only walk on '.'
     let mut queue = VecDeque::new();
     let mut visited = HashSet::new();
     let mut at_step_count = HashSet::new();
@@ -142,10 +140,8 @@ fn solve(input: &str) {
         }
     }
 
-    // let mut grid = grid;
-    // for pos in &at_step_count {
-    //     grid.data[pos.1][pos.0] = 'O';
-    // }
-    // grid.print();
     println!("Part 1: {}", at_step_count.len());
+
+    // Part 2
+    let step_goal = 26_501_365;
 }
