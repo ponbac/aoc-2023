@@ -11,11 +11,11 @@ use nom::{
 };
 
 static EXAMPLE_INPUT: &str = r#"
-broadcaster -> a, b, c
-%a -> b
-%b -> c
-%c -> inv
-&inv -> a
+broadcaster -> a
+%a -> inv, con
+&inv -> b
+%b -> con
+&con -> output
 "#;
 
 fn main() {
@@ -27,7 +27,7 @@ fn main() {
     solve(input.trim());
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Module {
     FlipFlop {
         id: String,
@@ -43,6 +43,38 @@ enum Module {
         id: String,
         destinations: Vec<String>,
     },
+}
+
+impl Module {
+    fn process(&mut self, from: &str, high: bool) -> Option<bool> {
+        match self {
+            Module::FlipFlop { on, .. } => {
+                if !high {
+                    *on = !*on;
+                    Some(*on)
+                } else {
+                    None
+                }
+            }
+            Module::Conjunction { inputs, .. } => {
+                let mut all_high = true;
+                for (id, last_high) in inputs {
+                    if id == from {
+                        *last_high = high;
+                    } else if !*last_high {
+                        all_high = false;
+                    }
+                }
+
+                if all_high {
+                    Some(false)
+                } else {
+                    Some(true)
+                }
+            }
+            Module::Broadcaster { .. } => Some(high),
+        }
+    }
 }
 
 impl Module {
@@ -99,10 +131,13 @@ fn solve(input: &str) {
     let mut modules: HashMap<String, Module> = input
         .lines()
         .map(|line| Module::parse(line).unwrap().1)
-        .map(|module| match module {
-            Module::FlipFlop { id, .. } => (id, module),
-            Module::Conjunction { id, .. } => (id, module),
-            Module::Broadcaster { id, .. } => (id, module),
+        .map(|module| {
+            let id = match &module {
+                Module::FlipFlop { id, .. } => id,
+                Module::Conjunction { id, .. } => id,
+                Module::Broadcaster { id, .. } => id,
+            };
+            (id.to_string(), module)
         })
         .collect();
 
@@ -144,71 +179,64 @@ fn solve(input: &str) {
             }
         }
     }
+    println!("Modules: {:#?}", modules);
 
-    // println!("Modules: {:#?}", modules);
+    let mut n_low = 0;
+    let mut n_high = 0;
 
-    let mut pulse_queue: VecDeque<(String, String, bool)> = VecDeque::new();
-    let broadcaster = modules.get("broadcaster").unwrap();
+    for _ in 0..1000 {
+        let mut pulse_queue: VecDeque<(String, String, bool)> = VecDeque::new();
+        pulse_queue.push_back(("broadcaster".to_string(), "a".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "b".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "c".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "nt".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "kx".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "rc".to_string(), false));
+        // pulse_queue.push_back(("broadcaster".to_string(), "mg".to_string(), false));
+        n_low += 1;
 
-    // for _ in 0..1000 {
-    broadcast(broadcaster, &mut pulse_queue);
-    while let Some((from, curr, high)) = pulse_queue.pop_front() {
-        // println!("Pulse: {} {}", id, on);
-        let module = modules.get_mut(&curr).unwrap();
-
-        match module {
-            Module::FlipFlop {
-                mut on,
-                destinations,
-                ..
-            } => {
-                if !high {
-                    on = !on;
-                    destinations.iter().for_each(|to| {
-                        pulse_queue.push_back((curr, to.to_string(), on));
-                    });
+        while let Some((from, to, high)) = pulse_queue.pop_front() {
+            if let Some(module) = modules.get_mut(to.as_str()) {
+                if let Some(high) = module.process(from.as_str(), high) {
+                    match module {
+                        Module::FlipFlop { destinations, .. } => {
+                            for destination in destinations {
+                                pulse_queue.push_back((to.clone(), destination.to_string(), high));
+                                if high {
+                                    n_high += 1;
+                                } else {
+                                    n_low += 1;
+                                }
+                            }
+                        }
+                        Module::Conjunction { destinations, .. } => {
+                            for destination in destinations {
+                                pulse_queue.push_back((to.clone(), destination.to_string(), high));
+                                if high {
+                                    n_high += 1;
+                                } else {
+                                    n_low += 1;
+                                }
+                            }
+                        }
+                        Module::Broadcaster { destinations, .. } => {
+                            for destination in destinations {
+                                pulse_queue.push_back((to.clone(), destination.to_string(), high));
+                                if high {
+                                    n_high += 1;
+                                } else {
+                                    n_low += 1;
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-            Module::Conjunction {
-                inputs,
-                destinations,
-                ..
-            } => {
-                // mutate input for from
-                let input = inputs.iter_mut().find(|(id, _)| *id == from).unwrap();
-                input.1 = high;
-                let all_on = inputs.iter().all(|(_, on)| *on);
-                if all_on {
-                    destinations.iter().for_each(|to| {
-                        pulse_queue.push_back((curr, to.to_string(), false));
-                    });
-                } else {
-                    destinations.iter().for_each(|to| {
-                        pulse_queue.push_back((curr, to.to_string(), true));
-                    });
-                }
-            }
-            Module::Broadcaster { .. } => {
-                broadcast(module, &mut pulse_queue);
             }
         }
     }
-    // }
 
-    println!("Modules: {:#?}", modules);
-}
-
-fn broadcast(broadcast_module: &Module, pulse_queue: &mut VecDeque<(String, String, bool)>) {
-    let Module::Broadcaster {
-        id, destinations, ..
-    } = broadcast_module
-    else {
-        panic!("Expected Broadcaster module");
-    };
-
-    for destination in destinations {
-        pulse_queue.push_back((id.to_string(), destination.to_string(), false));
-    }
+    println!("Low: {}, High: {}", n_low, n_high);
+    println!("Result: {}", n_low * n_high);
 }
 
 fn parse_id(i: &str) -> IResult<&str, &str> {
