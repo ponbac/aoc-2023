@@ -9,6 +9,7 @@ use nom::{
     sequence::{preceded, separated_pair},
     IResult,
 };
+use num::{integer::lcm, Integer};
 
 static EXAMPLE_INPUT: &str = r#"
 broadcaster -> a, b, c
@@ -183,18 +184,59 @@ fn solve(input: &str) {
             }
         }
     }
-    println!("Modules: {:#?}", modules);
+    // println!("Modules: {:#?}", modules);
+
+    let goal_node = "rx";
+    let mut giga_nodes = modules
+        .iter()
+        .find_map(|(_, module)| match module {
+            Module::Conjunction {
+                destinations,
+                inputs,
+                ..
+            } => {
+                if destinations.contains(&goal_node.to_string()) {
+                    Some(
+                        inputs
+                            .iter()
+                            .map(|(id, _)| id.to_string())
+                            .collect::<Vec<String>>(),
+                    )
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+        .unwrap();
+    // println!("Giga nodes: {:?}", giga_nodes);
 
     let mut n_low = 0;
     let mut n_high = 0;
+    let mut lcms: Vec<usize> = vec![];
 
-    for _ in 0..1000 {
+    for i in 0.. {
+        if i == 1000 {
+            println!("Part 1: {}", n_low * n_high);
+        } else if lcms.len() == 4 {
+            println!(
+                "Part 2: {}",
+                lcm(lcms[0], lcm(lcms[1], lcm(lcms[2], lcms[3])))
+            );
+            break;
+        }
+
         let mut pulse_queue: VecDeque<(String, String, bool)> = VecDeque::new();
         pulse_queue.push_back(("btn".to_string(), "broadcaster".to_string(), false));
         n_low += 1;
 
         while let Some((from, to, high)) = pulse_queue.pop_front() {
-            // println!("{} -> {} ({})", from, to, high);
+            if giga_nodes.contains(&to) && !high {
+                let index = giga_nodes.iter().position(|id| id == &to).unwrap();
+                giga_nodes.remove(index);
+                lcms.push(i + 1);
+            }
+
             if let Some(module) = modules.get_mut(to.as_str()) {
                 if let Some(high) = module.process(from.as_str(), high) {
                     match module {
@@ -233,9 +275,6 @@ fn solve(input: &str) {
             }
         }
     }
-
-    println!("Low: {}, High: {}", n_low, n_high);
-    println!("Result: {}", n_low * n_high);
 }
 
 fn parse_id(i: &str) -> IResult<&str, &str> {
