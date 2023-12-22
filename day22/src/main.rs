@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 static EXAMPLE_INPUT: &str = r#"
 1,0,1~1,2,1
 0,0,2~2,0,2
@@ -74,7 +76,9 @@ fn main() {
     // let input = EXAMPLE_INPUT;
     let input = include_str!("input.txt");
 
+    let start = std::time::Instant::now();
     solve(input.trim());
+    println!("Time: {:?}", start.elapsed());
 }
 
 fn solve(input: &str) {
@@ -91,14 +95,32 @@ fn solve(input: &str) {
     //     println!("{:?}", brick);
     // }
 
-    let (removable_bricks, would_fall) = count_removable_bricks(&bricks);
-    println!("Part 1: {}", removable_bricks);
-    println!("Part 2: {}", would_fall);
+    let removable_bricks = count_removable_bricks(&bricks);
+    println!("Part 1: {}", removable_bricks.len());
+
+    let non_removable_bricks = bricks
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !removable_bricks.contains(i))
+        .map(|(i, _)| i)
+        .collect::<Vec<_>>();
+    let would_fall_sum = non_removable_bricks
+        .par_iter()
+        .map(|&i| {
+            let mut bricks = bricks.clone();
+            bricks.remove(i);
+            let mut occupied = HashSet::new();
+            for brick in bricks.iter() {
+                occupied.extend(brick.occupies());
+            }
+            fall(&mut bricks, &mut occupied)
+        })
+        .sum::<usize>();
+    println!("Part 2: {}", would_fall_sum);
 }
 
-fn count_removable_bricks(bricks: &[Brick]) -> (usize, usize) {
-    let mut removable_bricks = 0;
-    let mut would_fall_sum = 0;
+fn count_removable_bricks(bricks: &[Brick]) -> Vec<usize> {
+    let mut removable_bricks = Vec::new();
 
     let mut occupied = HashSet::new();
     for brick in bricks {
@@ -107,7 +129,7 @@ fn count_removable_bricks(bricks: &[Brick]) -> (usize, usize) {
 
     for i in 0..bricks.len() {
         // temporarily remove the current brick
-        println!("removing brick {}", i);
+        // println!("removing brick {}", i);
         for &cell in &bricks[i].occupies() {
             occupied.remove(&cell);
         }
@@ -127,29 +149,15 @@ fn count_removable_bricks(bricks: &[Brick]) -> (usize, usize) {
         });
 
         if is_removable {
-            removable_bricks += 1;
-        } else {
-            // check how many bricks would fall if the current brick was removed
-            let mut bricks = bricks.to_vec();
-            bricks.remove(i);
-            bricks.sort_by(|a, b| a.start.2.cmp(&b.start.2));
-
-            let mut occupied = HashSet::new();
-            for brick in bricks.iter() {
-                occupied.extend(brick.occupies());
-            }
-
-            let would_fall = fall(&mut bricks, &mut occupied);
-            would_fall_sum += would_fall;
+            removable_bricks.push(i);
         }
-
         // restore the removed brick
         for &cell in &bricks[i].occupies() {
             occupied.insert(cell);
         }
     }
 
-    (removable_bricks, would_fall_sum)
+    removable_bricks
 }
 
 fn fall(bricks: &mut [Brick], occupied: &mut HashSet<(usize, usize, usize)>) -> usize {
@@ -164,18 +172,13 @@ fn fall(bricks: &mut [Brick], occupied: &mut HashSet<(usize, usize, usize)>) -> 
                 break;
             }
 
-            // create a temporary set of occupied positions excluding the current brick
-            let temp_occupied: HashSet<_> = occupied
-                .difference(&brick.occupies().into_iter().collect())
-                .cloned()
-                .collect();
-
-            // check if the positions below the brick are free (not in temp_occupied)
+            // check if the positions below the brick are free
+            let curr_occupies = brick.occupies().into_iter().collect::<HashSet<_>>();
             if brick
                 .down()
                 .occupies()
                 .iter()
-                .any(|cell| temp_occupied.contains(cell))
+                .any(|cell| occupied.contains(cell) && !curr_occupies.contains(cell))
             {
                 if has_fallen {
                     n_fallen += 1;
