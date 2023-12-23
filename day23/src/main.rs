@@ -273,10 +273,10 @@ fn find_edges(
     todo.push_back((start_node, 0));
     visited.insert(start_node);
 
-    let mut result = Vec::new();
+    let mut edges = Vec::new();
     while let Some((pos, steps)) = todo.pop_front() {
         if pos != start_node && nodes.contains(&pos) {
-            result.push((pos, steps));
+            edges.push((pos, steps));
             continue;
         }
 
@@ -294,5 +294,5 @@ fn find_edges(
         }
     }
 
-    result
+    edges
 }
