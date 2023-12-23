@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::{collections::HashSet, iter};
 
 static EXAMPLE_INPUT: &str = r#"
 ...........
@@ -32,29 +32,35 @@ impl Direction {
         }
     }
 
-    fn checked_add(
-        &self,
-        pos: (usize, usize),
-        upper_limit: (usize, usize),
-    ) -> Option<(usize, usize)> {
+    fn add(&self, pos: (isize, isize)) -> (isize, isize) {
         let (x, y) = pos;
         let (dx, dy) = self.delta();
-        let x = x as isize + dx;
-        let y = y as isize + dy;
+        (x + dx, y + dy)
+    }
 
-        if x < 0 || y < 0 || x >= upper_limit.0 as isize || y >= upper_limit.1 as isize {
+    fn checked_add(
+        &self,
+        pos: (isize, isize),
+        upper_limit: (isize, isize),
+    ) -> Option<(isize, isize)> {
+        let (x, y) = pos;
+        let (dx, dy) = self.delta();
+        let x = x + dx;
+        let y = y + dy;
+
+        if x < 0 || y < 0 || x >= upper_limit.0 || y >= upper_limit.1 {
             None
         } else {
-            Some((x as usize, y as usize))
+            Some((x, y))
         }
     }
 }
 
 struct Grid {
     data: Vec<Vec<char>>,
-    start_pos: (usize, usize),
-    height: usize,
-    width: usize,
+    start_pos: (isize, isize),
+    height: isize,
+    width: isize,
 }
 
 impl Grid {
@@ -79,21 +85,17 @@ impl Grid {
 
         Self {
             data,
-            start_pos,
-            height,
-            width,
+            start_pos: (start_pos.0 as isize, start_pos.1 as isize),
+            height: height as isize,
+            width: width as isize,
         }
     }
 
-    fn get(&self, pos: (usize, usize)) -> char {
+    fn get_wrapped(&self, pos: (isize, isize)) -> char {
         let (x, y) = pos;
-        self.data[y][x]
-    }
-
-    fn print(&self) {
-        for row in &self.data {
-            println!("{}", row.iter().collect::<String>());
-        }
+        let x = x.rem_euclid(self.width);
+        let y = y.rem_euclid(self.height);
+        self.data[y as usize][x as usize]
     }
 }
 
@@ -109,39 +111,73 @@ fn main() {
 fn solve(input: &str) {
     let grid = Grid::new(input);
 
-    let mut queue = VecDeque::new();
-    let mut visited = HashSet::new();
-    let mut at_step_count = HashSet::new();
+    let mut initial_visited = HashSet::new();
+    initial_visited.insert(grid.start_pos);
 
-    queue.push_back((grid.start_pos, 0));
-    while let Some((pos, steps)) = queue.pop_front() {
-        if steps == 64 {
-            at_step_count.insert(pos);
-            continue;
-        }
+    let reachable = iter::successors(Some(initial_visited), |prev_visited| {
+        let mut next = HashSet::new();
 
-        if visited.contains(&(pos, steps)) {
-            continue;
-        }
-
-        visited.insert((pos, steps));
-
-        for dir in &[
-            Direction::Up,
-            Direction::Down,
-            Direction::Left,
-            Direction::Right,
-        ] {
-            if let Some(next_pos) = dir.checked_add(pos, (grid.width, grid.height)) {
-                if grid.get(next_pos) == '.' || grid.get(next_pos) == 'S' {
-                    queue.push_back((next_pos, steps + 1));
+        for pos in prev_visited {
+            for dir in &[
+                Direction::Up,
+                Direction::Down,
+                Direction::Left,
+                Direction::Right,
+            ] {
+                if let Some(next_pos) = dir.checked_add(*pos, (grid.width, grid.height)) {
+                    if grid.get_wrapped(next_pos) == '.' || grid.get_wrapped(next_pos) == 'S' {
+                        next.insert(next_pos);
+                    }
                 }
             }
         }
-    }
 
-    println!("Part 1: {}", at_step_count.len());
+        Some(next)
+    })
+    .nth(64)
+    .unwrap();
 
-    // Part 2
-    let step_goal = 26_501_365;
+    println!("Part 1: {}", reachable.len());
+
+    let mut initial_visited: HashSet<(isize, isize)> = HashSet::new();
+    initial_visited.insert(grid.start_pos);
+
+    let _ = iter::successors(Some(initial_visited), |prev_visited| {
+        let mut next = HashSet::new();
+
+        for pos in prev_visited {
+            for dir in &[
+                Direction::Up,
+                Direction::Down,
+                Direction::Left,
+                Direction::Right,
+            ] {
+                let next_pos = dir.add(*pos);
+                let next_tile = grid.get_wrapped(next_pos);
+                match next_tile {
+                    '.' | 'S' => {
+                        next.insert(next_pos);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Some(next)
+    })
+    .enumerate()
+    // .inspect(|(i, visited)| match i {
+    //     6 | 10 | 50 | 100 | 500 | 1000 | 5000 => {
+    //         println!("{}: {}", i, visited.len());
+    //     }
+    //     _ => {}
+    // })
+    // .nth(5_000)
+    .inspect(|(i, visited)| {
+        if i >= &64 && ((i + 1 - 65) % 131) == 0 {
+            println!("{:03}: {}", i + 1, visited.len());
+        }
+    })
+    .nth(26_501_365)
+    .unwrap();
 }
