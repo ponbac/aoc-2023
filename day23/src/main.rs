@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashSet, VecDeque},
-    fmt,
-};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 static EXAMPLE_INPUT: &str = r#"
 #.#####################
@@ -135,30 +132,17 @@ impl Grid {
     }
 }
 
-impl fmt::Display for Grid {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for line in &self.data {
-            for c in line {
-                write!(f, "{}", c)?;
-            }
-            writeln!(f)?;
-        }
-        Ok(())
-    }
-}
-
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 23 --");
 
-    // let input = EXAMPLE_INPUT;
-    let input = include_str!("input.txt");
+    let input = EXAMPLE_INPUT;
+    // let input = include_str!("input.txt");
 
     solve(input.trim());
 }
 
 fn solve(input: &str) {
     let grid = Grid::parse(input);
-    // println!("Grid:\n{}", grid);
 
     let part1 = find_longest_path(&grid);
     println!("Part 1: {}", part1);
@@ -168,13 +152,12 @@ fn solve(input: &str) {
 }
 
 fn find_longest_path(grid: &Grid) -> usize {
-    let mut queue = VecDeque::new();
-    queue.push_back((grid.start, 0, HashSet::from([grid.start])));
+    let mut todo = VecDeque::new();
+    todo.push_back((grid.start, 0, HashSet::from([grid.start])));
 
     let mut max_steps = 0;
-    while let Some((pos, steps, mut visited)) = queue.pop_front() {
+    while let Some((pos, steps, mut visited)) = todo.pop_front() {
         if pos == grid.goal {
-            // println!("Found path with {} steps", steps);
             max_steps = max_steps.max(steps);
             continue;
         }
@@ -194,7 +177,7 @@ fn find_longest_path(grid: &Grid) -> usize {
                     '#' => continue,
                     '.' => {
                         visited.insert(next_pos);
-                        queue.push_back((next_pos, steps + 1, visited.clone()));
+                        todo.push_back((next_pos, steps + 1, visited.clone()));
                     }
                     '^' | 'v' | '<' | '>' => {
                         visited.insert(next_pos);
@@ -209,7 +192,7 @@ fn find_longest_path(grid: &Grid) -> usize {
                         let next_pos = dir.add(next_pos);
                         if !visited.contains(&next_pos) {
                             visited.insert(next_pos);
-                            queue.push_back((next_pos, steps + 2, visited.clone()));
+                            todo.push_back((next_pos, steps + 2, visited.clone()));
                         }
                     }
                     _ => panic!("Unexpected char"),
@@ -222,14 +205,78 @@ fn find_longest_path(grid: &Grid) -> usize {
 }
 
 fn find_longest_path_2(grid: &Grid) -> usize {
-    let mut queue = VecDeque::new();
-    queue.push_back((grid.start, 0, HashSet::from([grid.start])));
+    let mut nodes = HashSet::new();
+
+    nodes.insert(grid.start);
+    nodes.insert(grid.goal);
+
+    for y in 0..grid.height {
+        for x in 0..grid.width {
+            if grid.get((x, y)) == '.' {
+                let mut neighbours = 0;
+                for dir in &[
+                    Direction::Up,
+                    Direction::Down,
+                    Direction::Left,
+                    Direction::Right,
+                ] {
+                    if let Some(next_pos) = dir.checked_add((x, y), (grid.width, grid.height)) {
+                        if grid.get(next_pos) == '.' {
+                            neighbours += 1;
+                        }
+                    }
+                }
+
+                if neighbours > 2 {
+                    nodes.insert((x, y));
+                }
+            }
+        }
+    }
+
+    let mut edges = HashMap::new();
+    for node in &nodes {
+        edges.insert(*node, find_edges(*node, grid, &nodes));
+    }
+
+    let mut todo = VecDeque::new();
+    todo.push_back((grid.start, 0, HashSet::from([grid.start])));
 
     let mut max_steps = 0;
-    while let Some((pos, steps, mut visited)) = queue.pop_front() {
+    while let Some((pos, steps, visited)) = todo.pop_front() {
         if pos == grid.goal {
-            // println!("Found path with {} steps", steps);
             max_steps = max_steps.max(steps);
+            continue;
+        }
+
+        for (next_pos, next_steps) in edges.get(&pos).unwrap() {
+            if visited.contains(next_pos) {
+                continue;
+            }
+
+            let mut visited = visited.clone();
+            visited.insert(*next_pos);
+            todo.push_back((*next_pos, steps + next_steps, visited));
+        }
+    }
+
+    max_steps
+}
+
+fn find_edges(
+    start_node: (usize, usize),
+    grid: &Grid,
+    nodes: &HashSet<(usize, usize)>,
+) -> Vec<((usize, usize), usize)> {
+    let mut todo = VecDeque::new();
+    let mut visited = HashSet::new();
+    todo.push_back((start_node, 0));
+    visited.insert(start_node);
+
+    let mut result = Vec::new();
+    while let Some((pos, steps)) = todo.pop_front() {
+        if pos != start_node && nodes.contains(&pos) {
+            result.push((pos, steps));
             continue;
         }
 
@@ -240,21 +287,12 @@ fn find_longest_path_2(grid: &Grid) -> usize {
             Direction::Right,
         ] {
             if let Some(next_pos) = dir.checked_add(pos, (grid.width, grid.height)) {
-                if visited.contains(&next_pos) {
-                    continue;
-                }
-
-                match grid.get(next_pos) {
-                    '#' => continue,
-                    '.' => {
-                        visited.insert(next_pos);
-                        queue.push_back((next_pos, steps + 1, visited.clone()));
-                    }
-                    _ => panic!("Unexpected char"),
+                if grid.get(next_pos) == '.' && visited.insert(next_pos) {
+                    todo.push_back((next_pos, steps + 1));
                 }
             }
         }
     }
 
-    max_steps
+    result
 }
