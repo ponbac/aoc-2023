@@ -9,20 +9,20 @@ static EXAMPLE_INPUT: &str = r#"
 fn main() {
     println!("\n-- Advent of Code 2023 - Day 24 --");
 
-    let input = EXAMPLE_INPUT;
-    // let input = include_str!("input.txt");
+    // let input = EXAMPLE_INPUT;
+    let input = include_str!("input.txt");
 
     solve(input.trim());
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Hailstone {
-    x: i64,
-    y: i64,
-    z: i64,
-    vx: i64,
-    vy: i64,
-    vz: i64,
+    x: i128,
+    y: i128,
+    z: i128,
+    vx: i128,
+    vy: i128,
+    vz: i128,
 }
 
 impl Hailstone {
@@ -48,8 +48,8 @@ impl Hailstone {
         }
     }
 
-    /// Ignores z-plane
-    fn as_line(&self) -> (i64, i64, i64) {
+    /// Ignores z-plane, equation: ax + by + c = 0
+    fn as_line(&self) -> (i128, i128, i128) {
         let a = self.vy;
         let b = -self.vx;
         let c = self.vx * self.y - self.vy * self.x;
@@ -57,7 +57,7 @@ impl Hailstone {
         (a, b, c)
     }
 
-    fn intersection(&self, other: &Self) -> Option<(i64, i64)> {
+    fn intersection(&self, other: &Self) -> Option<(i128, i128)> {
         let (a1, b1, c1) = self.as_line();
         let (a2, b2, c2) = other.as_line();
 
@@ -76,8 +76,8 @@ impl Hailstone {
 fn solve(input: &str) {
     let stones = input.lines().map(Hailstone::parse).collect::<Vec<_>>();
 
-    let pos_min = 7;
-    let pos_max = 27;
+    // let range = 7..=27;
+    let range = 200000000000000..=400000000000000;
 
     let mut n_collisions = 0;
     for i in 0..stones.len() {
@@ -87,7 +87,21 @@ fn solve(input: &str) {
             }
 
             if let Some((x, y)) = stones[i].intersection(&stones[j]) {
-                if x >= pos_min && x <= pos_max && y >= pos_min && y <= pos_max {
+                if i128::signum(x - stones[i].x) != i128::signum(stones[i].vx)
+                    || i128::signum(y - stones[i].y) != i128::signum(stones[i].vy)
+                {
+                    // in the past
+                    continue;
+                }
+
+                if i128::signum(x - stones[j].x) != i128::signum(stones[j].vx)
+                    || i128::signum(y - stones[j].y) != i128::signum(stones[j].vy)
+                {
+                    // in the past
+                    continue;
+                }
+
+                if range.contains(&x) && range.contains(&y) {
                     n_collisions += 1;
                 }
             }
@@ -109,7 +123,7 @@ mod tests {
     fn test_hailstone(
         #[case] input1: &str,
         #[case] input2: &str,
-        #[case] expected: Option<(i64, i64)>,
+        #[case] expected: Option<(i128, i128)>,
     ) {
         let h1 = Hailstone::parse(input1);
         let h2 = Hailstone::parse(input2);
