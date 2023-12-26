@@ -1,11 +1,10 @@
-use std::collections::{HashMap, HashSet};
-
-use petgraph::{
-    graph::UnGraph,
-    stable_graph::NodeIndex,
-    visit::{Dfs, EdgeRef},
-    Graph,
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex},
 };
+
+use petgraph::{graph::UnGraph, stable_graph::NodeIndex, visit::Dfs};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 static EXAMPLE_INPUT: &str = r#"
 jqt: rhn xhk nvd
@@ -33,16 +32,26 @@ fn main() {
 }
 
 fn solve(input: &str) {
-    let (graph, node_map) = parse_input(input);
+    let (graph, _) = parse_input(input);
 
     let edge_ids: Vec<_> = graph.edge_indices().collect();
-    let mut solution_found = false;
 
     // Iterating over all combinations of three edges
+    let solution_found = Arc::new(Mutex::new(false));
+
     println!("Number of edges: {}", edge_ids.len());
-    for &edge1 in &edge_ids {
+    edge_ids.par_iter().skip(23).for_each(|&edge1| {
+        if *solution_found.lock().unwrap() {
+            return;
+        }
         println!("Working on edge {}", edge1.index());
+
         for &edge2 in &edge_ids {
+            // println!(
+            //     "Layer 2: {} - Working on edge {}",
+            //     edge1.index(),
+            //     edge2.index()
+            // );
             if edge2 == edge1 {
                 continue;
             }
@@ -65,25 +74,14 @@ fn solve(input: &str) {
                     // Calculate the product of the sizes of the components
                     let sizes_product: usize = calculate_component_sizes(&graph);
                     println!("Solution found! Sizes product: {}", sizes_product);
-                    solution_found = true;
-                }
-
-                if solution_found {
-                    break;
+                    *solution_found.lock().unwrap() = true;
+                    return;
                 }
             }
-            if solution_found {
-                break;
-            }
         }
-        if solution_found {
-            break;
-        }
-    }
+    });
 
-    if !solution_found {
-        println!("No solution found that divides the graph into exactly two components.");
-    }
+    println!("No solution found that divides the graph into exactly two components.");
 }
 
 fn calculate_component_sizes(graph: &UnGraph<&str, ()>) -> usize {
